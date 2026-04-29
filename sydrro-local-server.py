@@ -1,5 +1,7 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+import base64
+import io
 import json
 import os
 import socket
@@ -7,10 +9,12 @@ import sys
 import tempfile
 import threading
 import webbrowser
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
+DATA_XLSX_PATH = ROOT / "data.xlsx"
 APP_HTML_FILE = "SYDRRO-TECH-V4.html"
 
 
@@ -38,6 +42,9 @@ class SydrroHandler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == "/api/backup":
             self.receive_backup()
             return
+        if self.path.split("?", 1)[0] == "/api/data-xlsx":
+            self.receive_data_xlsx()
+            return
         self.send_error(404, "Not Found")
 
     def send_backup(self):
@@ -49,6 +56,47 @@ class SydrroHandler(SimpleHTTPRequestHandler):
             return
 
         payload = BACKUP_PATH.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def receive_data_xlsx(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0:
+            self.send_error(400, "Empty workbook payload")
+            return
+        if length > 30 * 1024 * 1024:
+            self.send_error(413, "Workbook payload too large")
+            return
+
+        raw = self.rfile.read(length)
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            if data.get("app") != "SYDRRO-TECH":
+                raise ValueError("Invalid app marker")
+            if data.get("file") != "data.xlsx":
+                raise ValueError("Invalid workbook target")
+            workbook_bytes = base64.b64decode(data.get("contentBase64") or "", validate=True)
+            if len(workbook_bytes) > 20 * 1024 * 1024:
+                raise ValueError("Workbook too large")
+            if not zipfile.is_zipfile(io.BytesIO(workbook_bytes)):
+                raise ValueError("Workbook is not a valid xlsx file")
+        except Exception as exc:
+            self.send_error(400, f"Invalid workbook payload: {exc}")
+            return
+
+        fd, tmp_name = tempfile.mkstemp(prefix="data-", suffix=".xlsx", dir=ROOT)
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(workbook_bytes)
+            os.replace(tmp_name, DATA_XLSX_PATH)
+        finally:
+            if os.path.exists(tmp_name):
+                os.remove(tmp_name)
+
+        payload = json.dumps({"ok": True, "bytes": len(workbook_bytes)}).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
