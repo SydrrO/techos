@@ -386,6 +386,22 @@
         .ocr-form textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
         .ocr-form input[readonly] { background: #f8fafc; color: #64748b; }
         .ocr-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+        .ocr-batch-panel { grid-column: 1 / -1; border-top: 1px solid var(--border-soft); padding: 0 20px 20px; }
+        .ocr-batch-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 4px 0 12px; }
+        .ocr-batch-title { font-size: 13px; font-weight: 900; color: var(--text-main); }
+        .ocr-batch-table-wrap { overflow-x: auto; border: 1px solid #edf2f7; border-radius: 14px; }
+        .ocr-batch-table { width: 100%; min-width: 920px; border-collapse: collapse; }
+        .ocr-batch-table th, .ocr-batch-table td { padding: 10px 9px; border-bottom: 1px solid #edf2f7; font-size: 11px; vertical-align: middle; }
+        .ocr-batch-table tr:last-child td { border-bottom: 0; }
+        .ocr-batch-table tbody tr { cursor: pointer; }
+        .ocr-batch-table tbody tr.active { background: rgba(0,122,255,.06); }
+        .ocr-batch-table input { width: 100%; min-width: 70px; border: 1px solid #e2e8f0; border-radius: 9px; padding: 7px 8px; font-size: 11px; outline: none; }
+        .ocr-batch-table input:focus { border-color: rgba(0,122,255,.5); box-shadow: 0 0 0 3px rgba(0,122,255,.08); }
+        .ocr-batch-file { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; color: #475467; }
+        .ocr-batch-status { font-weight: 900; color: #64748b; white-space: nowrap; }
+        .ocr-batch-status.ok { color: #34c759; }
+        .ocr-batch-status.warn { color: #ff9500; }
+        .ocr-batch-status.error { color: #ff3b30; }
 
         @media (max-width: 820px) {
             #drop-zone { width: 56px; height: 56px; right: 16px; bottom: 22px; }
@@ -648,7 +664,8 @@
                 </div>
                 <div class="ocr-tools">
                     <button class="ocr-btn primary" onclick="document.getElementById('image-order-file').click()">选择图片</button>
-                    <button class="ocr-btn light" onclick="runImageOrderOcr()">识别</button>
+                    <button class="ocr-btn light" onclick="runImageOrderOcr()">识别当前</button>
+                    <button class="ocr-btn light" onclick="runBatchImageOrderOcr()">识别全部</button>
                     <button class="ocr-btn light" onclick="extractImageOrderFromText()">提取文本</button>
                 </div>
                 <div id="ocr-status" class="ocr-status"></div>
@@ -716,12 +733,41 @@
                 <div class="ocr-actions">
                     <button class="ocr-btn light" onclick="closeImageOrderModal()">取消</button>
                     <button class="ocr-btn dark" onclick="saveImageOrderToXlsx()">写入 data.xlsx</button>
+                    <button class="ocr-btn primary" onclick="saveBatchImageOrdersToXlsx()">批量写入完整订单</button>
+                </div>
+            </div>
+            <div class="ocr-batch-panel">
+                <div class="ocr-batch-head">
+                    <div class="ocr-batch-title">批量识别队列</div>
+                    <button class="ocr-btn light" onclick="clearImageOrderBatch()">清空队列</button>
+                </div>
+                <div class="ocr-batch-table-wrap">
+                    <table class="ocr-batch-table">
+                        <thead>
+                            <tr>
+                                <th style="width:42px;">#</th>
+                                <th>文件</th>
+                                <th>姓名</th>
+                                <th>电话</th>
+                                <th>机器</th>
+                                <th style="width:86px;">编号</th>
+                                <th>起租</th>
+                                <th>结束</th>
+                                <th style="width:96px;">租金</th>
+                                <th>发货地</th>
+                                <th style="width:86px;">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ocr-batch-body">
+                            <tr><td colspan="11" class="empty-row">还没有选择图片</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<input type="file" id="image-order-file" accept="image/*" style="display:none">
+<input type="file" id="image-order-file" accept="image/*" multiple style="display:none">
 <datalist id="ocr-model-options"></datalist>
 
 <div id="drop-zone" title="拖拽或点击导入Excel数据">📁</div>
@@ -742,6 +788,9 @@
     let chartEventsBound = false;
     let autoBackupTimer = null;
     let imageOrderFile = null;
+    let imageOrderFiles = [];
+    let imageOrderBatch = [];
+    let activeImageOrderIndex = -1;
 
     const STORAGE_KEYS = {
         assetsData: 'sydrro_assets_data',
@@ -969,6 +1018,57 @@
         return String(document.getElementById(id)?.value || '').trim();
     }
 
+    function createEmptyImageOrderFields() {
+        return {
+            orderNo: '',
+            name: '',
+            nickname: '',
+            depositAmount: null,
+            model: '',
+            phone: '',
+            startDate: '',
+            endDate: '',
+            area: '',
+            deviceId: '',
+            rent: '',
+            rawText: ''
+        };
+    }
+
+    function readOcrFormFields() {
+        const depositText = getOcrField('ocr-deposit');
+        return {
+            orderNo: getOcrField('ocr-order-no'),
+            name: getOcrField('ocr-name'),
+            nickname: getOcrField('ocr-nickname'),
+            depositAmount: depositText ? Number(depositText) : null,
+            model: getOcrField('ocr-model'),
+            phone: getOcrField('ocr-phone'),
+            startDate: getOcrField('ocr-start-date'),
+            endDate: getOcrField('ocr-end-date'),
+            area: getOcrField('ocr-area'),
+            deviceId: getOcrField('ocr-device-id'),
+            rent: getOcrField('ocr-rent'),
+            rawText: getOcrField('ocr-raw-text')
+        };
+    }
+
+    function writeOcrFormFields(fields = {}) {
+        setOcrField('ocr-order-no', fields.orderNo || '');
+        setOcrField('ocr-platform', '闲鱼');
+        setOcrField('ocr-deposit', fields.depositAmount !== null && fields.depositAmount !== undefined ? Number(fields.depositAmount).toFixed(2) : '');
+        setOcrField('ocr-name', fields.name || '');
+        setOcrField('ocr-phone', fields.phone || '');
+        setOcrField('ocr-nickname', fields.nickname || '');
+        setOcrField('ocr-area', fields.area || '');
+        setOcrField('ocr-model', fields.model || '');
+        setOcrField('ocr-device-id', fields.deviceId || '');
+        setOcrField('ocr-start-date', fields.startDate || '');
+        setOcrField('ocr-end-date', fields.endDate || '');
+        setOcrField('ocr-rent', fields.rent || '');
+        setOcrField('ocr-raw-text', fields.rawText || '');
+    }
+
     function renderOcrModelOptions() {
         const list = document.getElementById('ocr-model-options');
         if (!list) return;
@@ -981,6 +1081,7 @@
         renderOcrModelOptions();
         setOcrStatus('');
         setOcrSaveState('待写入');
+        renderImageOrderBatch();
         document.getElementById('image-order-modal')?.classList.add('active');
     }
 
@@ -1087,6 +1188,13 @@
         };
     }
 
+    function compactExtractedFields(fields) {
+        return Object.entries(fields || {}).reduce((acc, [key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) acc[key] = value;
+            return acc;
+        }, {});
+    }
+
     function fillImageOrderFields(fields) {
         if (fields.orderNo) setOcrField('ocr-order-no', fields.orderNo);
         if (fields.name) setOcrField('ocr-name', fields.name);
@@ -1099,6 +1207,110 @@
         if (fields.startDate) setOcrField('ocr-start-date', fields.startDate);
         if (fields.endDate) setOcrField('ocr-end-date', fields.endDate);
         setOcrField('ocr-platform', '闲鱼');
+    }
+
+    function syncActiveImageOrderFromForm() {
+        if (activeImageOrderIndex < 0 || !imageOrderBatch[activeImageOrderIndex]) return;
+        const entry = imageOrderBatch[activeImageOrderIndex];
+        entry.fields = {
+            ...entry.fields,
+            ...readOcrFormFields()
+        };
+        if (entry.status !== '识别中' && entry.status !== '已写入' && entry.status !== '识别失败') {
+            entry.status = getImageOrderMissingFields(entry.fields).length ? '待补全' : '待写入';
+        }
+    }
+
+    function getBatchStatusClass(entry) {
+        const status = entry?.status || '';
+        if (/已写入|已识别|待写入/.test(status)) return 'ok';
+        if (/失败|错误/.test(status)) return 'error';
+        return 'warn';
+    }
+
+    function renderImageOrderBatch() {
+        const tbody = document.getElementById('ocr-batch-body');
+        if (!tbody) return;
+        if (!imageOrderBatch.length) {
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-row">还没有选择图片</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = imageOrderBatch.map((entry, index) => {
+            const f = entry.fields || {};
+            const status = entry.status || '待识别';
+            return `
+                <tr class="${index === activeImageOrderIndex ? 'active' : ''}" onclick="loadImageOrderBatchItem(${index})">
+                    <td>${index + 1}</td>
+                    <td><div class="ocr-batch-file" title="${escapeHtml(entry.fileName || '')}">${escapeHtml(entry.fileName || '-')}</div></td>
+                    <td>${escapeHtml(f.name || '-')}</td>
+                    <td>${escapeHtml(f.phone || '-')}</td>
+                    <td><input value="${escapeHtml(f.model || '')}" placeholder="机型" onclick="event.stopPropagation()" oninput="updateBatchField(${index}, 'model', this.value)"></td>
+                    <td><input value="${escapeHtml(f.deviceId || '')}" placeholder="#" onclick="event.stopPropagation()" oninput="updateBatchField(${index}, 'deviceId', this.value)"></td>
+                    <td>${escapeHtml(f.startDate || '-')}</td>
+                    <td>${escapeHtml(f.endDate || '-')}</td>
+                    <td><input type="number" min="0" step="0.01" value="${escapeHtml(f.rent || '')}" placeholder="租金" onclick="event.stopPropagation()" oninput="updateBatchField(${index}, 'rent', this.value)"></td>
+                    <td><input value="${escapeHtml(f.area || '')}" placeholder="发货地" onclick="event.stopPropagation()" oninput="updateBatchField(${index}, 'area', this.value)"></td>
+                    <td><span class="ocr-batch-status ${getBatchStatusClass(entry)}">${escapeHtml(status)}</span></td>
+                </tr>`;
+        }).join('');
+    }
+
+    function updateBatchField(index, key, value) {
+        const entry = imageOrderBatch[index];
+        if (!entry) return;
+        entry.fields = { ...createEmptyImageOrderFields(), ...(entry.fields || {}), [key]: value };
+        if (entry.status !== '识别中' && entry.status !== '已写入' && entry.status !== '识别失败') {
+            entry.status = getImageOrderMissingFields(entry.fields).length ? '待补全' : '待写入';
+        }
+        if (index === activeImageOrderIndex) {
+            const fieldMap = {
+                model: 'ocr-model',
+                deviceId: 'ocr-device-id',
+                rent: 'ocr-rent',
+                area: 'ocr-area'
+            };
+            if (fieldMap[key]) setOcrField(fieldMap[key], value);
+        }
+    }
+
+    function loadImageOrderBatchItem(index) {
+        if (activeImageOrderIndex !== index) syncActiveImageOrderFromForm();
+        const entry = imageOrderBatch[index];
+        if (!entry) return;
+        activeImageOrderIndex = index;
+        imageOrderFile = entry.file;
+        const preview = document.getElementById('ocr-preview');
+        const empty = document.getElementById('ocr-upload-empty');
+        if (preview && entry.file) {
+            entry.previewUrl = entry.previewUrl || URL.createObjectURL(entry.file);
+            preview.src = entry.previewUrl;
+            preview.style.display = 'block';
+        }
+        if (empty) empty.style.display = 'none';
+        writeOcrFormFields(entry.fields || createEmptyImageOrderFields());
+        setOcrSaveState(entry.status || '待识别');
+        setOcrStatus(`${entry.fileName || '图片'}：${entry.status || '待识别'}`);
+        renderImageOrderBatch();
+    }
+
+    function clearImageOrderBatch() {
+        imageOrderBatch.forEach(entry => entry.previewUrl && URL.revokeObjectURL(entry.previewUrl));
+        imageOrderFiles = [];
+        imageOrderBatch = [];
+        imageOrderFile = null;
+        activeImageOrderIndex = -1;
+        writeOcrFormFields(createEmptyImageOrderFields());
+        const preview = document.getElementById('ocr-preview');
+        const empty = document.getElementById('ocr-upload-empty');
+        if (preview) {
+            preview.removeAttribute('src');
+            preview.style.display = 'none';
+        }
+        if (empty) empty.style.display = 'block';
+        setOcrSaveState('待写入');
+        setOcrStatus('');
+        renderImageOrderBatch();
     }
 
     function getDepositInferenceMessage(fields, fallbackMessage) {
@@ -1117,13 +1329,79 @@
             return;
         }
         const fields = extractImageOrderFields(text);
-        fillImageOrderFields(fields);
+        const mergedFields = { ...readOcrFormFields(), ...compactExtractedFields(fields), rawText: text };
+        writeOcrFormFields(mergedFields);
+        if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
+            imageOrderBatch[activeImageOrderIndex].fields = mergedFields;
+            imageOrderBatch[activeImageOrderIndex].status = getImageOrderMissingFields(mergedFields).length ? '待补全' : '待写入';
+            renderImageOrderBatch();
+        }
         setOcrSaveState('待写入');
         setOcrStatus(getDepositInferenceMessage(fields, '已从文本提取字段'));
     }
 
+    async function recognizeImageOrderFile(file, onProgress) {
+        if (!window.Tesseract) throw new Error('OCR 组件未加载，可手动粘贴文本后提取');
+        const result = await Tesseract.recognize(file, 'chi_sim+eng', {
+            logger: info => {
+                if (info.status === 'recognizing text') {
+                    onProgress?.(Math.round((info.progress || 0) * 100));
+                }
+            }
+        });
+        return normalizeOcrText(result?.data?.text || '');
+    }
+
+    function applyOcrResultToEntry(entry, text) {
+        const extracted = extractImageOrderFields(text);
+        entry.fields = {
+            ...createEmptyImageOrderFields(),
+            ...(entry.fields || {}),
+            ...compactExtractedFields(extracted),
+            rawText: text
+        };
+        const missing = getImageOrderMissingFields(entry.fields);
+        entry.status = missing.length ? '待补全' : '待写入';
+        return extracted;
+    }
+
     async function runImageOrderOcr() {
-        if (!imageOrderFile) {
+        if (activeImageOrderIndex >= 0) syncActiveImageOrderFromForm();
+        const entry = activeImageOrderIndex >= 0 ? imageOrderBatch[activeImageOrderIndex] : null;
+        const file = entry?.file || imageOrderFile;
+        if (!file) {
+            setOcrStatus('请先选择图片');
+            return;
+        }
+
+        try {
+            if (entry) {
+                entry.status = '识别中';
+                renderImageOrderBatch();
+            }
+            setOcrStatus('OCR 识别中...');
+            const text = await recognizeImageOrderFile(file, progress => setOcrStatus(`OCR 识别中 ${progress}%`));
+            const extracted = entry
+                ? applyOcrResultToEntry(entry, text)
+                : { ...extractImageOrderFields(text), rawText: text };
+            if (!entry) setOcrField('ocr-raw-text', text);
+            if (entry) writeOcrFormFields(entry.fields);
+            else fillImageOrderFields(extracted);
+            setOcrSaveState(entry?.status || '待写入');
+            setOcrStatus(getDepositInferenceMessage(extracted, '识别完成'));
+            renderImageOrderBatch();
+        } catch (err) {
+            console.error(err);
+            if (entry) {
+                entry.status = '识别失败';
+                renderImageOrderBatch();
+            }
+            setOcrStatus('识别失败，可手动粘贴文本后提取');
+        }
+    }
+
+    async function runBatchImageOrderOcr() {
+        if (!imageOrderBatch.length) {
             setOcrStatus('请先选择图片');
             return;
         }
@@ -1132,39 +1410,46 @@
             return;
         }
 
-        try {
-            setOcrStatus('OCR 识别中...');
-            const result = await Tesseract.recognize(imageOrderFile, 'chi_sim+eng', {
-                logger: info => {
-                    if (info.status === 'recognizing text') {
-                        setOcrStatus(`OCR 识别中 ${Math.round((info.progress || 0) * 100)}%`);
-                    }
-                }
-            });
-            const text = normalizeOcrText(result?.data?.text || '');
-            setOcrField('ocr-raw-text', text);
-            const fields = extractImageOrderFields(text);
-            fillImageOrderFields(fields);
-            setOcrSaveState('待写入');
-            setOcrStatus(getDepositInferenceMessage(fields, '识别完成'));
-        } catch (err) {
-            console.error(err);
-            setOcrStatus('识别失败，可手动粘贴文本后提取');
+        syncActiveImageOrderFromForm();
+        for (let i = 0; i < imageOrderBatch.length; i++) {
+            const entry = imageOrderBatch[i];
+            try {
+                imageOrderFile = entry.file;
+                entry.status = '识别中';
+                loadImageOrderBatchItem(i);
+                renderImageOrderBatch();
+                const text = await recognizeImageOrderFile(entry.file, progress => {
+                    setOcrStatus(`第 ${i + 1}/${imageOrderBatch.length} 张识别中 ${progress}%`);
+                });
+                const extracted = applyOcrResultToEntry(entry, text);
+                writeOcrFormFields(entry.fields);
+                setOcrSaveState(entry.status);
+                setOcrStatus(getDepositInferenceMessage(extracted, `第 ${i + 1}/${imageOrderBatch.length} 张识别完成`));
+            } catch (err) {
+                console.error(err);
+                entry.status = '识别失败';
+                setOcrStatus(`第 ${i + 1}/${imageOrderBatch.length} 张识别失败`);
+            }
+            renderImageOrderBatch();
         }
+        const completeCount = imageOrderBatch.filter(entry => !getImageOrderMissingFields(entry.fields).length).length;
+        setOcrStatus(`批量识别完成：${completeCount}/${imageOrderBatch.length} 单可写入`);
     }
 
-    function handleImageOrderFile(file) {
-        if (!file) return;
-        imageOrderFile = file;
-        const preview = document.getElementById('ocr-preview');
-        const empty = document.getElementById('ocr-upload-empty');
-        if (preview) {
-            preview.src = URL.createObjectURL(file);
-            preview.style.display = 'block';
-        }
-        if (empty) empty.style.display = 'none';
-        setOcrStatus('图片已选择');
-        setOcrSaveState('待写入');
+    function handleImageOrderFiles(fileList) {
+        const files = Array.from(fileList || []).filter(file => file && file.type.startsWith('image/'));
+        if (!files.length) return;
+        clearImageOrderBatch();
+        imageOrderFiles = files;
+        imageOrderBatch = files.map(file => ({
+            file,
+            fileName: file.name,
+            status: '待识别',
+            fields: createEmptyImageOrderFields()
+        }));
+        loadImageOrderBatchItem(0);
+        setOcrStatus(`已选择 ${files.length} 张图片`);
+        renderImageOrderBatch();
     }
 
     function getSheetHeaders(sheet) {
@@ -1202,22 +1487,26 @@
         }
     }
 
-    function buildImageOrderRow() {
+    function fieldsToImageOrderRow(fields) {
         const row = {
-            '名字': getOcrField('ocr-name'),
-            '昵称': getOcrField('ocr-nickname'),
+            '名字': fields.name || '',
+            '昵称': fields.nickname || '',
             '平台': '闲鱼',
-            '手机号码': getOcrField('ocr-phone'),
-            '地区': getOcrField('ocr-area'),
-            '机器': getOcrField('ocr-model'),
-            '编号': getOcrField('ocr-device-id'),
-            '起租日': normalizeOcrDate(getOcrField('ocr-start-date')) || getOcrField('ocr-start-date'),
-            '结束日': normalizeOcrDate(getOcrField('ocr-end-date')) || getOcrField('ocr-end-date'),
-            '租金': getOcrField('ocr-rent') ? Number(getOcrField('ocr-rent')) : ''
+            '手机号码': fields.phone || '',
+            '地区': fields.area || '',
+            '机器': fields.model || '',
+            '编号': fields.deviceId || '',
+            '起租日': normalizeOcrDate(fields.startDate) || fields.startDate || '',
+            '结束日': normalizeOcrDate(fields.endDate) || fields.endDate || '',
+            '租金': fields.rent ? Number(fields.rent) : ''
         };
-        const orderNo = getOcrField('ocr-order-no');
+        const orderNo = fields.orderNo || '';
         if (orderNo) row['订单号'] = orderNo;
+        return row;
+    }
 
+    function getImageOrderMissingFields(fields) {
+        const row = fieldsToImageOrderRow(fields || {});
         const missing = [
             ['名字', '姓名'],
             ['手机号码', '联系电话'],
@@ -1228,60 +1517,85 @@
             ['租金', '租金'],
             ['地区', '发货地']
         ].filter(([key]) => String(row[key] ?? '').trim() === '').map(([, label]) => label);
+        if (row['起租日'] && !parseDate(row['起租日'])) missing.push('起租日格式');
+        if (row['结束日'] && !parseDate(row['结束日'])) missing.push('结束日格式');
+        return missing;
+    }
+
+    function buildImageOrderRow(sourceFields = null) {
+        const fields = sourceFields || readOcrFormFields();
+        const row = fieldsToImageOrderRow(fields);
+        const missing = getImageOrderMissingFields(fields);
         if (missing.length) throw new Error(`请补全：${missing.join('、')}`);
-        if (!parseDate(row['起租日']) || !parseDate(row['结束日'])) throw new Error('起租日/结束日格式无法识别');
         return row;
+    }
+
+    async function appendImageOrderRowsToXlsx(newRows) {
+        if (!window.XLSX) throw new Error('Excel 解析库没有加载成功');
+        if (!newRows.length) throw new Error('没有可写入的订单');
+
+        let workbook;
+        let sheetName = 'Sheet1';
+        let rows = [];
+        let headers = [...ORDER_EXPORT_HEADERS];
+        try {
+            const response = await fetch(`./${LOCAL_DATA_FILE}?t=${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const buffer = await response.arrayBuffer();
+            workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+            sheetName = workbook.SheetNames[0] || sheetName;
+            const sheet = workbook.Sheets[sheetName];
+            rows = normalizeImportedRows(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
+            headers = getSheetHeaders(sheet);
+        } catch (err) {
+            workbook = XLSX.utils.book_new();
+        }
+
+        const existingOrderNos = new Set(rows.map(row => String(row['订单号'] || '').trim()).filter(Boolean));
+        const incomingOrderNos = newRows.map(row => String(row['订单号'] || '').trim()).filter(Boolean);
+        const duplicateOrderNos = incomingOrderNos.filter((orderNo, index) =>
+            existingOrderNos.has(orderNo) || incomingOrderNos.indexOf(orderNo) !== index
+        );
+        if (duplicateOrderNos.length && !confirm(`发现重复订单号：${[...new Set(duplicateOrderNos)].join('、')}，仍然追加吗？`)) {
+            throw new Error('已取消写入');
+        }
+
+        const finalHeaders = [...headers];
+        ORDER_EXPORT_HEADERS.forEach(header => {
+            if (!finalHeaders.includes(header) && (header !== '订单号' || newRows.some(row => row['订单号']))) finalHeaders.push(header);
+        });
+        newRows.forEach(row => {
+            Object.keys(row).forEach(key => {
+                if (!finalHeaders.includes(key)) finalHeaders.push(key);
+            });
+        });
+
+        rows.push(...newRows);
+        const sheet = XLSX.utils.json_to_sheet(rows, { header: finalHeaders });
+        workbook.Sheets[sheetName] = sheet;
+        if (!workbook.SheetNames.includes(sheetName)) workbook.SheetNames.push(sheetName);
+
+        const output = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        await persistDataWorkbook(output);
+        const { rows: nextRows, validation } = readOrderRowsFromArrayBuffer(output);
+        applyOrderRows(nextRows, validation, { sourceName: LOCAL_DATA_FILE, notify: false, seedNotify: false });
+        return { addedCount: newRows.length };
     }
 
     async function saveImageOrderToXlsx() {
         try {
-            if (!window.XLSX) throw new Error('Excel 解析库没有加载成功');
-            const newRow = buildImageOrderRow();
+            syncActiveImageOrderFromForm();
+            const fields = activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]
+                ? imageOrderBatch[activeImageOrderIndex].fields
+                : readOcrFormFields();
+            const newRow = buildImageOrderRow(fields);
             setOcrSaveState('写入中');
             setOcrStatus('正在写入 data.xlsx...');
-
-            let workbook;
-            let sheetName = 'Sheet1';
-            let rows = [];
-            let headers = [...ORDER_EXPORT_HEADERS];
-            try {
-                const response = await fetch(`./${LOCAL_DATA_FILE}?t=${Date.now()}`, { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const buffer = await response.arrayBuffer();
-                workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-                sheetName = workbook.SheetNames[0] || sheetName;
-                const sheet = workbook.Sheets[sheetName];
-                rows = normalizeImportedRows(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
-                headers = getSheetHeaders(sheet);
-            } catch (err) {
-                workbook = XLSX.utils.book_new();
+            await appendImageOrderRowsToXlsx([newRow]);
+            if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
+                imageOrderBatch[activeImageOrderIndex].status = '已写入';
+                renderImageOrderBatch();
             }
-
-            if (newRow['订单号'] && rows.some(row => String(row['订单号'] || '').trim() === newRow['订单号'])) {
-                if (!confirm('这个订单号已存在，仍然追加吗？')) {
-                    setOcrSaveState('待写入');
-                    setOcrStatus('已取消写入');
-                    return;
-                }
-            }
-
-            const finalHeaders = [...headers];
-            ORDER_EXPORT_HEADERS.forEach(header => {
-                if (!finalHeaders.includes(header) && (header !== '订单号' || newRow['订单号'])) finalHeaders.push(header);
-            });
-            Object.keys(newRow).forEach(key => {
-                if (!finalHeaders.includes(key)) finalHeaders.push(key);
-            });
-            rows.push(newRow);
-
-            const sheet = XLSX.utils.json_to_sheet(rows, { header: finalHeaders });
-            workbook.Sheets[sheetName] = sheet;
-            if (!workbook.SheetNames.includes(sheetName)) workbook.SheetNames.push(sheetName);
-
-            const output = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-            await persistDataWorkbook(output);
-            const { rows: nextRows, validation } = readOrderRowsFromArrayBuffer(output);
-            applyOrderRows(nextRows, validation, { sourceName: LOCAL_DATA_FILE, notify: false, seedNotify: false });
             setOcrSaveState('已写入');
             setOcrStatus(`已追加 ${newRow['名字']} 的订单`);
             showToast('图片订单已写入 data.xlsx');
@@ -1289,7 +1603,44 @@
             console.error(err);
             setOcrSaveState('写入失败');
             setOcrStatus(err.message || '写入失败');
-            alert(`写入失败：${err.message || '请检查字段和本地服务'}`);
+            if (err.message !== '已取消写入') alert(`写入失败：${err.message || '请检查字段和本地服务'}`);
+        }
+    }
+
+    async function saveBatchImageOrdersToXlsx() {
+        try {
+            if (!imageOrderBatch.length) throw new Error('还没有批量识别队列');
+            syncActiveImageOrderFromForm();
+            const incomplete = [];
+            const newRows = [];
+            imageOrderBatch.forEach((entry, index) => {
+                const missing = getImageOrderMissingFields(entry.fields);
+                if (missing.length) {
+                    entry.status = `待补全`;
+                    incomplete.push(`#${index + 1} ${entry.fileName || ''}: ${missing.join('、')}`);
+                } else if (entry.status !== '已写入') {
+                    newRows.push(buildImageOrderRow(entry.fields));
+                }
+            });
+            renderImageOrderBatch();
+            if (incomplete.length) {
+                throw new Error(`还有订单未补全：\n${incomplete.slice(0, 6).join('\n')}${incomplete.length > 6 ? '\n...' : ''}`);
+            }
+            if (!newRows.length) throw new Error('没有新的完整订单可写入');
+
+            setOcrSaveState('批量写入中');
+            setOcrStatus(`正在批量写入 ${newRows.length} 单...`);
+            await appendImageOrderRowsToXlsx(newRows);
+            imageOrderBatch.forEach(entry => { if (entry.status !== '识别失败') entry.status = '已写入'; });
+            renderImageOrderBatch();
+            setOcrSaveState('已批量写入');
+            setOcrStatus(`已批量追加 ${newRows.length} 单`);
+            showToast(`已批量写入 ${newRows.length} 单`);
+        } catch (err) {
+            console.error(err);
+            setOcrSaveState('批量写入失败');
+            setOcrStatus(err.message || '批量写入失败');
+            if (err.message !== '已取消写入') alert(`批量写入失败：${err.message || '请检查字段和本地服务'}`);
         }
     }
 
@@ -2194,7 +2545,7 @@
         e.target.value = '';
     });
     document.getElementById('image-order-file').addEventListener('change', (e) => {
-        handleImageOrderFile(e.target.files && e.target.files[0]);
+        handleImageOrderFiles(e.target.files);
         e.target.value = '';
     });
     document.getElementById('image-order-modal').addEventListener('click', (e) => {
