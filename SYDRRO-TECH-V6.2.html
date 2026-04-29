@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.1">
-    <title>SYDRRO-TECH V6.1 | 智能资产终端</title>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <meta name="app-version" content="V6.2">
+    <title>SYDRRO-TECH V6.2 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -98,6 +96,116 @@
         .page { display: none; }
         .page.active { display: block; animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        body.app-booting header,
+        body.app-booting .status-bar,
+        body.app-booting .container {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        body.app-ready header,
+        body.app-ready .status-bar,
+        body.app-ready .container {
+            animation: appEnter .62s cubic-bezier(.2, .8, .2, 1) both;
+        }
+
+        body.app-ready .status-bar { animation-delay: .08s; }
+        body.app-ready .container { animation-delay: .15s; }
+
+        @keyframes appEnter {
+            from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+
+        #app-loader {
+            position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+            background:
+                linear-gradient(120deg, rgba(255,255,255,0.92), rgba(242,247,252,0.82)),
+                linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
+            transition: opacity .46s ease, visibility .46s ease;
+        }
+
+        #app-loader::before {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background:
+                linear-gradient(90deg, rgba(0,122,255,0.08) 1px, transparent 1px),
+                linear-gradient(180deg, rgba(15,23,42,0.05) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.08));
+        }
+
+        #app-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .loader-panel {
+            width: min(360px, calc(100vw - 54px));
+            position: relative;
+            padding: 30px;
+            border-radius: 24px;
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(255,255,255,0.86);
+            box-shadow: 0 28px 80px rgba(15,23,42,0.15);
+            backdrop-filter: blur(22px) saturate(150%);
+            animation: loaderRise .72s cubic-bezier(.2, .8, .2, 1) both;
+            overflow: hidden;
+        }
+
+        .loader-panel::after {
+            content: ""; position: absolute; left: -35%; right: -35%; top: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0,122,255,0.62), rgba(52,199,89,0.44), transparent);
+            animation: loaderScan 1.6s ease-in-out infinite;
+        }
+
+        .loader-brand {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 24px;
+        }
+
+        .loader-mark {
+            width: 42px; height: 42px; border-radius: 14px;
+            background: linear-gradient(135deg, #007aff, #19c39a);
+            box-shadow: 0 14px 26px rgba(0,122,255,0.22);
+            position: relative;
+        }
+
+        .loader-mark::before,
+        .loader-mark::after {
+            content: ""; position: absolute; left: 10px; right: 10px; height: 3px; border-radius: 999px;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .loader-mark::before { top: 13px; }
+        .loader-mark::after { bottom: 13px; width: 12px; right: auto; }
+
+        .loader-title { display: flex; flex-direction: column; gap: 3px; }
+        .loader-title strong { font-size: 18px; letter-spacing: 0; color: #172033; }
+        .loader-title span { font-size: 11px; font-weight: 900; color: #7b8798; letter-spacing: 0; }
+
+        .loader-track {
+            height: 8px; border-radius: 999px; background: #e8eff7;
+            overflow: hidden; box-shadow: inset 0 1px 2px rgba(15,23,42,0.08);
+        }
+
+        .loader-track span {
+            display: block; width: 42%; height: 100%; border-radius: inherit;
+            background: linear-gradient(90deg, #007aff, #19c39a);
+            animation: loaderProgress 1.18s cubic-bezier(.48, 0, .18, 1) infinite;
+            box-shadow: 0 0 18px rgba(0,122,255,0.22);
+        }
+
+        @keyframes loaderRise {
+            from { opacity: 0; transform: translateY(16px) scale(.97); filter: blur(6px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        @keyframes loaderProgress {
+            from { transform: translateX(-110%); }
+            to { transform: translateX(250%); }
+        }
+
+        @keyframes loaderScan {
+            0%, 100% { transform: translateX(-20%); opacity: .35; }
+            50% { transform: translateX(20%); opacity: 1; }
+        }
 
         .card {
             background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.91));
@@ -506,14 +614,27 @@
         }
     </style>
 </head>
-<body>
+<body class="app-booting">
+
+<div id="app-loader" role="status" aria-live="polite">
+    <div class="loader-panel">
+        <div class="loader-brand">
+            <div class="loader-mark" aria-hidden="true"></div>
+            <div class="loader-title">
+                <strong>SYDRRO-TECH</strong>
+                <span>INTELLIGENT ASSET OS · V6.2</span>
+            </div>
+        </div>
+        <div class="loader-track" aria-hidden="true"><span></span></div>
+    </div>
+</div>
 
 <div id="overlay">释放文件以同步数据</div>
 
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V6.1</p>
+        <p>INTELLIGENT ASSET OS · V6.2</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -857,6 +978,8 @@
     const LOCAL_DATA_FILE = 'data.xlsx';
     const STATE_API_URL = '/api/state';
     const DATA_XLSX_API_URL = '/api/data-xlsx';
+    const XLSX_SCRIPT_URL = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+    const ECHARTS_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
     const RECENT_DONE_DAYS = 3;
     const DAY_MS = 86400000;
     const ORDER_EXPORT_HEADERS = ['名字', '昵称', '平台', '手机号码', '地区', '机器', '编号', '起租日', '结束日', '租金'];
@@ -872,6 +995,66 @@
         { days: 3, pattern: /新疆|西藏|青海|甘肃|宁夏|内蒙古|黑龙江|吉林|海南|香港|澳门|台湾/ },
         { days: 2, pattern: /云南|贵州|四川|重庆|广西|广东|福建|江西|湖南|湖北|河南|河北|山东|山西|陕西|辽宁/ }
     ];
+    let xlsxLoadPromise = null;
+    let echartsLoadPromise = null;
+    const appBootStartedAt = performance.now();
+    let appBootFinished = false;
+
+    function loadExternalScript(src) {
+        return new Promise((resolve, reject) => {
+            const existing = [...document.scripts].find(script => script.src === src);
+            if (existing?.dataset.loaded === 'true') {
+                resolve();
+                return;
+            }
+            if (existing) {
+                existing.addEventListener('load', resolve, { once: true });
+                existing.addEventListener('error', () => reject(new Error(`依赖加载失败：${src}`)), { once: true });
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.dataset.lazyRuntime = 'true';
+            script.onload = () => {
+                script.dataset.loaded = 'true';
+                resolve();
+            };
+            script.onerror = () => reject(new Error(`依赖加载失败：${src}`));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensureXlsx() {
+        if (window.XLSX) return window.XLSX;
+        xlsxLoadPromise = xlsxLoadPromise || loadExternalScript(XLSX_SCRIPT_URL);
+        await xlsxLoadPromise;
+        if (!window.XLSX) throw new Error('Excel 解析库没有加载成功，请检查网络或改用本地依赖版本');
+        return window.XLSX;
+    }
+
+    async function ensureEcharts() {
+        if (window.echarts) return window.echarts;
+        echartsLoadPromise = echartsLoadPromise || loadExternalScript(ECHARTS_SCRIPT_URL);
+        await echartsLoadPromise;
+        if (!window.echarts) throw new Error('图表库没有加载成功，请检查网络');
+        return window.echarts;
+    }
+
+    function finishAppBoot() {
+        if (appBootFinished) return;
+        appBootFinished = true;
+        const delay = Math.max(0, 420 - (performance.now() - appBootStartedAt));
+        setTimeout(() => {
+            document.body.classList.remove('app-booting');
+            document.body.classList.add('app-ready');
+            const loader = document.getElementById('app-loader');
+            if (!loader) return;
+            loader.classList.add('hidden');
+            setTimeout(() => loader.remove(), 520);
+        }, delay);
+    }
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -947,10 +1130,8 @@
         return { invalidDateCount: invalidDateRows.length };
     }
 
-    function readOrderRowsFromArrayBuffer(arrayBuffer) {
-        if (!window.XLSX) {
-            throw new Error('Excel 解析库没有加载成功，请检查网络或改用本地依赖版本');
-        }
+    async function readOrderRowsFromArrayBuffer(arrayBuffer) {
+        await ensureXlsx();
         const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const importedRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
@@ -992,7 +1173,8 @@
         [chartTrend, chartPie, chartPlatform, chartUtil].forEach(c => c && c.resize());
     }
 
-    function initCharts() {
+    async function initCharts() {
+        await ensureEcharts();
         if(!chartTrend) chartTrend = echarts.init(document.getElementById('trendChart'));
         if(!chartPie) chartPie = echarts.init(document.getElementById('pieChart'));
         if(!chartPlatform) chartPlatform = echarts.init(document.getElementById('platformChart'));
@@ -1027,16 +1209,23 @@
     }
 
     window.onload = async () => {
-        loadBrowserCacheState();
-        ensureRuntimeDefaults();
+        try {
+            loadBrowserCacheState();
+            ensureRuntimeDefaults();
 
-        const hasUnifiedState = await loadAutoBackup();
-        if (!hasUnifiedState || !rawData.length) {
-            await loadLocalOrderData({ persist: true, notify: !rawData.length });
+            const hasUnifiedState = await loadAutoBackup();
+            if (!hasUnifiedState || !rawData.length) {
+                loadLocalOrderData({ persist: true, notify: !rawData.length })
+                    .catch(err => console.warn('后台读取 data.xlsx 失败', err));
+            }
+        } catch (err) {
+            console.error('页面初始化失败', err);
+        } finally {
+            finishAppBoot();
         }
     };
 
-    function switchPage(p) {
+    async function switchPage(p) {
         document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
         document.getElementById(p).classList.add('active');
@@ -1044,9 +1233,14 @@
         document.getElementById('btn-' + btnMap[p]).classList.add('active');
 
         if(p === 'finance') {
-            initCharts();
-            renderPendingCharts();
-            setTimeout(resizeCharts, 100);
+            try {
+                await initCharts();
+                await renderPendingCharts();
+                setTimeout(resizeCharts, 100);
+            } catch (err) {
+                console.warn('图表模块加载失败', err);
+                showToast('图表模块暂时无法加载，请检查网络');
+            }
         }
         if(p === 'inventory') {
             renderModelOptions();
@@ -1059,7 +1253,7 @@
         const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
-                const { rows, validation } = readOrderRowsFromArrayBuffer(ev.target.result);
+                const { rows, validation } = await readOrderRowsFromArrayBuffer(ev.target.result);
                 applyOrderRows(rows, validation, { sourceName: file.name || '手动导入文件', notify: true, seedNotify: false, persist: false });
                 await persistUnifiedStateNow();
                 await syncOrderWorkbookMirror().catch(err => console.warn('同步 data.xlsx 镜像失败', err));
@@ -1082,9 +1276,11 @@
             const response = await fetch(`./${LOCAL_DATA_FILE}`, { cache: 'no-store' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const buffer = await response.arrayBuffer();
-            const { rows, validation } = readOrderRowsFromArrayBuffer(buffer);
+            const { rows, validation } = await readOrderRowsFromArrayBuffer(buffer);
             applyOrderRows(rows, validation, { sourceName: LOCAL_DATA_FILE, notify, seedNotify: false, persist: false });
-            if (persist) await persistUnifiedStateNow();
+            if (persist) {
+                await persistUnifiedStateNow().catch(err => console.warn('统一数据源同步失败', err));
+            }
             return true;
         } catch (err) {
             console.warn(`自动同步 ${LOCAL_DATA_FILE} 失败`, err);
@@ -1846,13 +2042,14 @@
     }
 
     async function syncOrderWorkbookMirror(rows = rawData) {
-        if (!window.XLSX || location.protocol === 'file:' || location.hostname.endsWith('github.io')) return false;
+        if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) return false;
+        await ensureXlsx();
         await persistDataWorkbook(buildOrderWorkbookArrayBuffer(rows || []));
         return true;
     }
 
     async function appendImageOrderRowsToXlsx(newRows) {
-        if (!window.XLSX) throw new Error('Excel 解析库没有加载成功');
+        await ensureXlsx();
         if (!newRows.length) throw new Error('没有可写入的订单');
 
         const rows = normalizeImportedRows(rawData || []);
@@ -2912,18 +3109,20 @@
 
     function queueChartRender(dailyMap, modelMap, platformMap, modelEfficiencyList) {
         pendingChartPayload = { dailyMap, modelMap, platformMap, modelEfficiencyList };
-        if (isFinancePageActive()) renderPendingCharts();
+        if (isFinancePageActive()) {
+            renderPendingCharts().catch(err => console.warn('图表渲染失败', err));
+        }
     }
 
-    function renderPendingCharts() {
+    async function renderPendingCharts() {
         if (!pendingChartPayload) return;
         const payload = pendingChartPayload;
         pendingChartPayload = null;
-        renderCharts(payload.dailyMap, payload.modelMap, payload.platformMap, payload.modelEfficiencyList);
+        await renderCharts(payload.dailyMap, payload.modelMap, payload.platformMap, payload.modelEfficiencyList);
     }
 
-    function renderCharts(dailyMap, modelMap, platformMap, modelEfficiencyList) {
-        initCharts();
+    async function renderCharts(dailyMap, modelMap, platformMap, modelEfficiencyList) {
+        await initCharts();
         const dates = Object.keys(dailyMap);
         const revenues = Object.values(dailyMap);
 

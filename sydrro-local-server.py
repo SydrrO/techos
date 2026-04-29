@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
 DATA_XLSX_PATH = ROOT / "data.xlsx"
 DB_PATH = ROOT / "sydrro-data.sqlite3"
-APP_HTML_FILE = "SYDRRO-TECH-V6.1.html"
+APP_HTML_FILE = "SYDRRO-TECH-V6.2.html"
 STATE_RECORD_ID = "default"
 
 
