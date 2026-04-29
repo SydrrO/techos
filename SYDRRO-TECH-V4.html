@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V4.3">
-    <title>SYDRRO-TECH V4.3 | 智能资产终端</title>
+    <meta name="app-version" content="V5.0">
+    <title>SYDRRO-TECH V5.0 | 智能资产终端</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -316,6 +316,18 @@
         .status-retired { background:rgba(99,115,129,.12); color:#637381; }
         .status-reserved { background:rgba(0,122,255,.10); color:#007aff; }
         .status-lost { background:rgba(255,59,48,.12); color:#ff3b30; }
+        .inv-current { display:flex; flex-direction:column; gap:5px; min-width:0; }
+        .inv-current-badge { width:max-content; max-width:100%; display:inline-flex; align-items:center; padding:4px 9px; border-radius:999px; font-size:10px; font-weight:900; line-height:1; }
+        .inv-current-badge.free { background:rgba(52,199,89,.12); color:#1f9d47; }
+        .inv-current-badge.busy { background:rgba(255,149,0,.12); color:#d86f00; }
+        .inv-current-badge.prep { background:rgba(0,122,255,.10); color:#007aff; }
+        .inv-current-badge.disabled { background:rgba(99,115,129,.12); color:#637381; }
+        .inv-current-main { font-size:12px; font-weight:800; color:var(--text-main); line-height:1.35; word-break:break-word; }
+        .inv-current-sub { font-size:11px; font-weight:700; color:#98a2b3; line-height:1.4; word-break:break-word; }
+        .inv-next { display:flex; flex-direction:column; gap:5px; min-width:0; }
+        .inv-next-primary { font-size:12px; font-weight:900; color:var(--blue); line-height:1.35; word-break:break-word; }
+        .inv-next-sub { font-size:11px; font-weight:700; color:#98a2b3; line-height:1.4; word-break:break-word; }
+        .inv-next-empty { color:#a8b3c2; font-size:11px; font-weight:800; }
         .inv-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
         .inv-search { flex:1; min-width:0; border:1px solid #edf2f7; background:rgba(248,250,252,0.92); border-radius:999px; padding:11px 16px; font-size:13px; font-weight:700; outline:none; transition:.2s; }
         .inv-search:focus { border-color:rgba(0,122,255,.35); background:#fff; box-shadow:var(--ring-blue); }
@@ -326,10 +338,12 @@
         .inv-op .edit { background:rgba(0,122,255,.08); color:#007aff; }
         .inv-op .delete { background:rgba(255,59,48,.08); color:#ff3b30; }
         #inventory-table { table-layout: fixed; }
-        #inventory-table th:nth-child(1), #inventory-table td:nth-child(1) { width: 22%; }
-        #inventory-table th:nth-child(2), #inventory-table td:nth-child(2) { width: 12%; }
-        #inventory-table th:nth-child(3), #inventory-table td:nth-child(3) { width: 18%; }
-        #inventory-table th:nth-child(5), #inventory-table td:nth-child(5) { width: 120px; }
+        #inventory-table th:nth-child(1), #inventory-table td:nth-child(1) { width: 13%; }
+        #inventory-table th:nth-child(2), #inventory-table td:nth-child(2) { width: 8%; }
+        #inventory-table th:nth-child(3), #inventory-table td:nth-child(3) { width: 13%; }
+        #inventory-table th:nth-child(4), #inventory-table td:nth-child(4) { width: 20%; }
+        #inventory-table th:nth-child(5), #inventory-table td:nth-child(5) { width: 22%; }
+        #inventory-table th:nth-child(7), #inventory-table td:nth-child(7) { width: 96px; }
         #inventory-table td { word-break: break-word; }
         @media (max-width: 1280px) {
             .grid-layout { grid-template-columns: 1fr; }
@@ -484,7 +498,7 @@
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V4.3</p>
+        <p>INTELLIGENT ASSET OS · V5.0</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -707,7 +721,7 @@
                 </div>
                 <div class="table-scroll">
                     <table id="inventory-table" class="compact-table">
-                        <thead><tr><th>机型</th><th>编号</th><th>状态</th><th>备注</th><th>操作</th></tr></thead>
+                        <thead><tr><th>机型</th><th>编号</th><th>台账状态</th><th>当前占用</th><th>下一档期</th><th>备注</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -2141,14 +2155,102 @@
         return allInv;
     }
 
+    function getInventoryOrderInfo(row, start, endDay, shippingPlan) {
+        return {
+            customer: String(row?.['名字'] || '无姓名').trim() || '无姓名',
+            platform: String(row?.['平台'] || '私单').trim() || '私单',
+            area: String(row?.['地区'] || '').trim(),
+            start,
+            endDay,
+            shippingPlan,
+            orderKey: getOrderKey(row)
+        };
+    }
+
+    function getInventoryScheduleMap() {
+        const map = new Map();
+        const { normalizedRows } = getNormalizedOrderAnalysis();
+        normalizedRows.forEach(({ r, start, endDay, prepWindow, shippingPlan }) => {
+            const key = normalizeKey(r['机器'], r['编号']);
+            if (!key) return;
+
+            const info = getInventoryOrderInfo(r, start, endDay, shippingPlan);
+            const returnRecord = readStatusRecord(returnStatus, info.orderKey);
+            if (returnRecord.status === 'returned') return;
+
+            const bucket = map.get(key) || { current: null, next: null };
+            if (realToday >= start && realToday <= endDay) {
+                bucket.current = { ...info, phase: 'busy' };
+            } else if (realToday >= prepWindow && realToday < start && !bucket.current) {
+                bucket.current = { ...info, phase: 'prep' };
+            }
+
+            if (start > realToday && (!bucket.next || start < bucket.next.start)) {
+                bucket.next = info;
+            }
+            map.set(key, bucket);
+        });
+        return map;
+    }
+
+    function renderInventoryCurrentState(item, schedule) {
+        if (item.status !== 'normal') {
+            return `<div class="inv-current">
+                <span class="inv-current-badge disabled">${escapeHtml(getStatusLabel(item.status))}</span>
+                <span class="inv-current-sub">不进入 READY 库存</span>
+            </div>`;
+        }
+
+        const current = schedule?.current;
+        if (!current) {
+            const nextText = schedule?.next ? `下次 ${formatDateStr(schedule.next.start)} 起租` : '暂无后续档期';
+            return `<div class="inv-current">
+                <span class="inv-current-badge free">空闲</span>
+                <span class="inv-current-sub">${escapeHtml(nextText)}</span>
+            </div>`;
+        }
+
+        const badgeClass = current.phase === 'prep' ? 'prep' : 'busy';
+        const badgeText = current.phase === 'prep' ? '备货中' : '出租中';
+        const subText = current.phase === 'prep'
+            ? `${formatDateStr(current.shippingPlan.shipDate)} 发 · ${formatDateStr(current.start)} 起租`
+            : `预计 ${formatDateStr(current.endDay)} 归还`;
+        return `<div class="inv-current">
+            <span class="inv-current-badge ${badgeClass}">${badgeText}</span>
+            <span class="inv-current-main">${escapeHtml(current.customer)} · ${escapeHtml(current.platform)}</span>
+            <span class="inv-current-sub">${escapeHtml(subText)}</span>
+        </div>`;
+    }
+
+    function renderInventoryNextSchedule(schedule) {
+        const next = schedule?.next;
+        if (!next) return '<span class="inv-next-empty">暂无下一单</span>';
+
+        const areaText = next.area ? ` · ${next.area}` : '';
+        return `<div class="inv-next">
+            <span class="inv-next-primary">${formatDateStr(next.shippingPlan.shipDate)} 发货 · ${formatDateStr(next.start)} 起租</span>
+            <span class="inv-next-sub">${escapeHtml(next.customer)} · ${escapeHtml(next.platform)}${escapeHtml(areaText)}</span>
+        </div>`;
+    }
+
+    function getInventoryScheduleSearchText(schedule) {
+        const parts = [];
+        [schedule?.current, schedule?.next].filter(Boolean).forEach(item => {
+            parts.push(item.customer, item.platform, item.area, formatDateStr(item.start), formatDateStr(item.endDay), formatDateStr(item.shippingPlan.shipDate));
+        });
+        return parts.filter(Boolean).join(' ').toLowerCase();
+    }
+
     function renderInventoryManager() {
         const q = String(document.getElementById('inv-search')?.value || '').trim().toLowerCase();
         const tbody = document.querySelector('#inventory-table tbody');
         if (!tbody) return;
 
         inventoryData = inventoryData.map(normalizeInventoryItem).filter(x => x.model && x.id);
+        const scheduleMap = getInventoryScheduleMap();
         const filtered = inventoryData.filter(item => {
-            const haystack = [item.model, item.id, getStatusLabel(item.status), item.buyDate, item.price, item.note].join(' ').toLowerCase();
+            const itemSchedule = scheduleMap.get(normalizeKey(item.model, item.id));
+            const haystack = [item.model, item.id, getStatusLabel(item.status), item.buyDate, item.price, item.note, getInventoryScheduleSearchText(itemSchedule)].join(' ').toLowerCase();
             return !q || haystack.includes(q);
         }).sort((a,b) => a.model.localeCompare(b.model) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
 
@@ -2167,6 +2269,7 @@
 
         tbody.innerHTML = filtered.map(item => {
             const key = encodeInlineArg(normalizeKey(item.model, item.id));
+            const itemSchedule = scheduleMap.get(normalizeKey(item.model, item.id));
             const model = escapeHtml(String(item.model).toUpperCase());
             const id = escapeHtml(item.id);
             const note = item.note ? escapeHtml(item.note) : '-';
@@ -2175,13 +2278,15 @@
                 <td style="font-weight:800;color:var(--blue);">${model}</td>
                 <td>#${id}</td>
                 <td><span class="status-badge ${getStatusClass(item.status)}">${statusLabel}</span></td>
+                <td>${renderInventoryCurrentState(item, itemSchedule)}</td>
+                <td>${renderInventoryNextSchedule(itemSchedule)}</td>
                 <td style="color:var(--text-secondary);max-width:260px;">${note}</td>
                 <td><div class="inv-op">
                     <button class="edit" onclick="editInventoryItem(decodeURIComponent('${key}'))">编辑</button>
                     <button class="delete" onclick="deleteInventoryItem(decodeURIComponent('${key}'))">删除</button>
                 </div></td>
             </tr>`;
-        }).join('') || '<tr><td colspan="5" class="empty-row">暂无库存设备</td></tr>';
+        }).join('') || '<tr><td colspan="7" class="empty-row">暂无库存设备</td></tr>';
     }
 
     function resetInventoryForm() {

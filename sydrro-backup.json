@@ -1,7 +1,7 @@
 {
   "app": "SYDRRO-TECH",
   "version": 2,
-  "exportedAt": "2026-04-29T08:32:23.399Z",
+  "exportedAt": "2026-04-29T08:56:53.594Z",
   "rawData": [
     {
       "名字": "大馍",
@@ -148,7 +148,7 @@
   "returnStatus": {
     "闲鱼|邱子恒|收物前请看简介和收物须知|ixus130|4|0418|0418|35": "returned"
   },
-  "currentActionFilter": "done",
+  "currentActionFilter": "return",
   "inventoryData": [
     {
       "model": "ixus130",
