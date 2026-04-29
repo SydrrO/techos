@@ -1019,6 +1019,14 @@
         return '';
     }
 
+    function sanitizeOcrName(value) {
+        return String(value || '')
+            .split(/深度风控查询|风控查询|未验证人脸|已验证人脸|身份证号|支付宝登录账号|支付宝|联系电话|下单所在地|性别/)[0]
+            .replace(/^姓名\s*/g, '')
+            .replace(/[^\u3400-\u9fff·]/g, '')
+            .trim();
+    }
+
     function normalizeOcrDate(value) {
         const match = String(value || '').match(/(20\d{2})[年\/-](\d{1,2})[月\/-](\d{1,2})/);
         if (!match) return '';
@@ -1061,7 +1069,7 @@
         const normalized = normalizeOcrText(text);
         const lines = normalized.split('\n').map(line => line.trim()).filter(Boolean);
         const orderNo = (normalized.match(/订单号\s*(\d{12,})/) || [])[1] || '';
-        const name = takeValueAfterLabel(lines, '姓名').replace(/\s/g, '');
+        const name = sanitizeOcrName(takeValueAfterLabel(lines, '姓名'));
         const nickname = takeValueAfterLabel(lines, '免押备注');
         const depositAmount = findMoneyNearLabel(lines, /免押金额|押金金额|押金/);
         const phoneLine = takeValueAfterLabel(lines, '联系电话');
