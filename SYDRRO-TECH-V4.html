@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V4">
-    <title>SYDRRO-TECH V4 | 智能资产终端</title>
+    <meta name="app-version" content="V4.1">
+    <title>SYDRRO-TECH V4.1 | 智能资产终端</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -417,7 +417,7 @@
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V4</p>
+        <p>INTELLIGENT ASSET OS · V4.1</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -791,6 +791,12 @@
     let imageOrderFiles = [];
     let imageOrderBatch = [];
     let activeImageOrderIndex = -1;
+    let computeRevision = 0;
+    let pendingDashboardFrame = null;
+    let pendingChartPayload = null;
+    let orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
+    const inventoryListCache = new Map();
+    const dateParseCache = new Map();
 
     const STORAGE_KEYS = {
         assetsData: 'sydrro_assets_data',
@@ -841,6 +847,24 @@
         localStorage.setItem(key, JSON.stringify(value));
     }
 
+    function invalidateLocalComputeCache() {
+        computeRevision++;
+        orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
+        inventoryListCache.clear();
+    }
+
+    function isFinancePageActive() {
+        return document.getElementById('finance')?.classList.contains('active');
+    }
+
+    function scheduleDashboardUpdate() {
+        if (pendingDashboardFrame) cancelAnimationFrame(pendingDashboardFrame);
+        pendingDashboardFrame = requestAnimationFrame(() => {
+            pendingDashboardFrame = null;
+            updateDashboard();
+        });
+    }
+
     function normalizeImportedRows(rows) {
         return (rows || [])
             .map(row => Object.entries(row || {}).reduce((acc, [key, value]) => {
@@ -884,9 +908,10 @@
     function applyOrderRows(rows, validation, options = {}) {
         const { sourceName = '数据文件', notify = true, seedNotify = false } = options;
         rawData = rows;
+        invalidateLocalComputeCache();
         writeJsonState(STORAGE_KEYS.assetsData, rawData);
         seedInventoryFromOrders({ notify: seedNotify, refresh: false });
-        updateDashboard();
+        scheduleDashboardUpdate();
         scheduleAutoBackup();
 
         if (notify) {
@@ -939,8 +964,9 @@
         renderModelOptions();
 
         rawData = readJsonState(STORAGE_KEYS.assetsData, []) || [];
+        invalidateLocalComputeCache();
         if (rawData.length) {
-            updateDashboard();
+            scheduleDashboardUpdate();
         }
 
         await loadAutoBackup();
@@ -956,6 +982,7 @@
 
         if(p === 'finance') {
             initCharts();
+            renderPendingCharts();
             setTimeout(resizeCharts, 100);
         }
         if(p === 'inventory') {
@@ -1861,7 +1888,16 @@
 
     function parseDate(val) {
         if (!val) return null;
-        if (typeof val === 'number') return new Date(Math.round((val - 25569) * 86400000));
+        const cacheKey = `${typeof val}:${String(val)}`;
+        if (dateParseCache.has(cacheKey)) {
+            const cachedTime = dateParseCache.get(cacheKey);
+            return cachedTime === null ? null : new Date(cachedTime);
+        }
+        if (typeof val === 'number') {
+            const excelDate = new Date(Math.round((val - 25569) * 86400000));
+            dateParseCache.set(cacheKey, excelDate.getTime());
+            return excelDate;
+        }
         let str = String(val).trim().replace(/\./g, '/').replace(/-/g, '/');
         if (/^\d{4}$/.test(str)) {
             let month = parseInt(str.substring(0, 2)) - 1;
@@ -1870,10 +1906,14 @@
             let year = realToday.getFullYear();
             if (currentMonth === 11 && month === 0) year += 1; 
             if (currentMonth === 0 && month === 11) year -= 1; 
-            return new Date(year, month, day);
+            const shortDate = new Date(year, month, day);
+            dateParseCache.set(cacheKey, shortDate.getTime());
+            return shortDate;
         }
         let d = new Date(str);
-        return isNaN(d.getTime()) ? null : d;
+        const time = isNaN(d.getTime()) ? null : d.getTime();
+        dateParseCache.set(cacheKey, time);
+        return time === null ? null : new Date(time);
     }
 
     function formatDateStr(d) {
@@ -1914,6 +1954,7 @@
 
     function saveInventoryLocal() {
         inventoryData = inventoryData.map(normalizeInventoryItem).filter(x => x.model && x.id);
+        invalidateLocalComputeCache();
         writeJsonState(STORAGE_KEYS.inventoryData, inventoryData);
         syncCustomModelsFromInventory();
         writeJsonState(STORAGE_KEYS.customModels, customModels || []);
@@ -1968,6 +2009,9 @@
 
     function buildInventoryList(options = {}) {
         const { includeUnavailable = false, includeOrderDiscovered = true } = options;
+        const cacheKey = `${computeRevision}:${includeUnavailable}:${includeOrderDiscovered}`;
+        const cached = inventoryListCache.get(cacheKey);
+        if (cached) return cached;
         let allInv = [];
         let seen = new Set();
 
@@ -1992,6 +2036,7 @@
                 }
             });
         }
+        inventoryListCache.set(cacheKey, allInv);
         return allInv;
     }
 
@@ -2077,7 +2122,7 @@
         saveInventoryLocal();
         resetInventoryForm();
         renderInventoryManager();
-        updateDashboard();
+        scheduleDashboardUpdate();
         showToast('库存已保存');
     }
 
@@ -2099,7 +2144,7 @@
         inventoryData = inventoryData.filter(x => normalizeKey(x.model, x.id) !== key);
         saveInventoryLocal();
         renderInventoryManager();
-        updateDashboard();
+        scheduleDashboardUpdate();
         showToast('设备已删除');
     }
 
@@ -2119,7 +2164,7 @@
         });
         saveInventoryLocal();
         renderInventoryManager();
-        if (refresh) updateDashboard();
+        if (refresh) scheduleDashboardUpdate();
         if (notify) showToast(added ? `已补全 ${added} 台设备` : '没有发现新的设备');
     }
 
@@ -2179,21 +2224,21 @@
     function setShipStatus(orderKey, status) {
         writeStatusRecord(shippingStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus);
-        updateDashboard();
+        scheduleDashboardUpdate();
         scheduleAutoBackup();
     }
 
     function setReturnStatus(orderKey, status) {
         writeStatusRecord(returnStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.returnStatus, returnStatus);
-        updateDashboard();
+        scheduleDashboardUpdate();
         scheduleAutoBackup();
     }
 
     function setActionFilter(filterKey) {
         currentActionFilter = currentActionFilter === filterKey ? 'all' : filterKey;
         localStorage.setItem(STORAGE_KEYS.actionFilter, currentActionFilter);
-        updateDashboard();
+        scheduleDashboardUpdate();
         scheduleAutoBackup();
     }
 
@@ -2243,11 +2288,12 @@
         if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
         inventoryData = Array.isArray(backup.inventoryData) && backup.inventoryData.length ? backup.inventoryData : getDefaultInventory();
         customModels = Array.isArray(backup.customModels) ? backup.customModels : [];
+        invalidateLocalComputeCache();
 
         saveAllLocalState();
         renderModelOptions();
         renderInventoryManager();
-        if (rawData.length) updateDashboard();
+        if (rawData.length) scheduleDashboardUpdate();
         if (notify) showToast('自动备份已恢复');
     }
 
@@ -2326,6 +2372,32 @@
         return conflictMap;
     }
 
+    function getNormalizedOrderAnalysis() {
+        if (orderAnalysisCache.revision === computeRevision) return orderAnalysisCache;
+
+        const normalizedRows = [];
+        rawData.forEach((r, idx) => {
+            let rawStart = parseDate(r['起租日']);
+            let rawEnd = parseDate(r['结束日']);
+            if (!rawStart || !rawEnd) return;
+
+            const start = new Date(rawStart); start.setHours(0, 0, 0, 0);
+            const endDay = new Date(rawEnd); endDay.setHours(0, 0, 0, 0);
+            const end = new Date(rawEnd); end.setHours(23, 59, 59, 999);
+            const prepWindow = new Date(start.getTime() - 2 * DAY_MS);
+            prepWindow.setHours(0, 0, 0, 0);
+
+            normalizedRows.push({ r, idx, start, endDay, end, prepWindow });
+        });
+
+        orderAnalysisCache = {
+            revision: computeRevision,
+            normalizedRows,
+            conflictMap: buildConflictMap(normalizedRows)
+        };
+        return orderAnalysisCache;
+    }
+
     function updateDashboard() {
         if (!rawData.length) return;
 
@@ -2346,7 +2418,6 @@
         let finRows = '';
         let t7 = 0, t30 = 0, orders30d = 0;
         let dailyRevMap = {}, modelRevMap = {}, platformRevMap = {}, deviceRevenueMap = {};
-        let normalizedRows = [];
         const financeWindowStart = new Date(qStart.getTime() - 29 * 86400000);
         financeWindowStart.setHours(0, 0, 0, 0);
 
@@ -2370,22 +2441,7 @@
             occupiedDayMap[key] = new Set();
         });
 
-        // 先统一清洗日期，方便后面做档期冲突检测
-        rawData.forEach((r, idx) => {
-            let rawStart = parseDate(r['起租日']);
-            let rawEnd = parseDate(r['结束日']);
-            if (!rawStart || !rawEnd) return;
-
-            const start = new Date(rawStart); start.setHours(0, 0, 0, 0);
-            const endDay = new Date(rawEnd); endDay.setHours(0, 0, 0, 0);
-            const end = new Date(rawEnd); end.setHours(23, 59, 59, 999);
-            const prepWindow = new Date(start.getTime() - 2 * 86400000);
-            prepWindow.setHours(0, 0, 0, 0);
-
-            normalizedRows.push({ r, idx, start, endDay, end, prepWindow });
-        });
-
-        const conflictMap = buildConflictMap(normalizedRows);
+        const { normalizedRows, conflictMap } = getNormalizedOrderAnalysis();
 
         normalizedRows.forEach(({ r, idx, start, endDay, end, prepWindow }) => {
             const rent = parseFloat(r['租金']) || 0;
@@ -2626,7 +2682,19 @@
         document.querySelector('#finance-table tbody').innerHTML = finRows || '<tr><td colspan="5" class="empty-row">近30天暂无结算流水</td></tr>';
 
         renderModelRanking(modelRankList);
-        renderCharts(dailyRevMap, modelRevMap, platformRevMap, modelEfficiencyList);
+        queueChartRender(dailyRevMap, modelRevMap, platformRevMap, modelEfficiencyList);
+    }
+
+    function queueChartRender(dailyMap, modelMap, platformMap, modelEfficiencyList) {
+        pendingChartPayload = { dailyMap, modelMap, platformMap, modelEfficiencyList };
+        if (isFinancePageActive()) renderPendingCharts();
+    }
+
+    function renderPendingCharts() {
+        if (!pendingChartPayload) return;
+        const payload = pendingChartPayload;
+        pendingChartPayload = null;
+        renderCharts(payload.dailyMap, payload.modelMap, payload.platformMap, payload.modelEfficiencyList);
     }
 
     function renderCharts(dailyMap, modelMap, platformMap, modelEfficiencyList) {
@@ -2742,8 +2810,8 @@
         document.getElementById('free-list').innerHTML = invHtml || '<div class="empty-state">暂无空闲资产</div>';
     }
 
-    document.getElementById('query-date').oninput = updateDashboard;
-    document.getElementById('query-days').oninput = updateDashboard;
+    document.getElementById('query-date').oninput = scheduleDashboardUpdate;
+    document.getElementById('query-days').oninput = scheduleDashboardUpdate;
     document.getElementById('drop-zone').addEventListener('click', () => {
         document.getElementById('excel-file-input').click();
     });
