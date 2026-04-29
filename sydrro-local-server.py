@@ -10,6 +10,8 @@ import sqlite3
 import sys
 import tempfile
 import threading
+from urllib.error import URLError
+from urllib.request import urlopen
 import webbrowser
 import zipfile
 
@@ -18,7 +20,7 @@ ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
 DATA_XLSX_PATH = ROOT / "data.xlsx"
 DB_PATH = ROOT / "sydrro-data.sqlite3"
-APP_HTML_FILE = "SYDRRO-TECH-V6.2.html"
+APP_HTML_FILE = "SYDRRO-TECH-V6.3.html"
 STATE_RECORD_ID = "default"
 
 
@@ -28,6 +30,33 @@ def is_port_in_use(port):
             return True
     except OSError:
         return False
+
+
+def app_url(port):
+    return f"http://127.0.0.1:{port}/{APP_HTML_FILE}"
+
+
+def existing_app_server_ready(port):
+    try:
+        with urlopen(app_url(port), timeout=0.8) as response:
+            return response.status < 500
+    except (OSError, URLError):
+        return False
+
+
+def open_browser_url(url):
+    try:
+        if webbrowser.open(url, new=2):
+            return
+    except Exception:
+        pass
+    if os.name == "nt":
+        try:
+            os.startfile(url)  # noqa: S606 - opens a local browser URL for the user.
+            return
+        except OSError:
+            pass
+    print(f"Open this URL manually: {url}", flush=True)
 
 
 def utc_now_iso():
@@ -253,6 +282,13 @@ def main():
     preferred_port = int(args[0]) if args else 8787
     open_browser = "--open" in sys.argv[1:]
 
+    if is_port_in_use(preferred_port) and existing_app_server_ready(preferred_port):
+        url = f"{app_url(preferred_port)}?v=existing"
+        print(f"SYDRRO-TECH local server is already running: {url}", flush=True)
+        if open_browser:
+            open_browser_url(url)
+        return
+
     server = None
     port = preferred_port
     for candidate in range(preferred_port, preferred_port + 30):
@@ -268,13 +304,13 @@ def main():
     if server is None:
         raise RuntimeError(f"No available local port from {preferred_port} to {preferred_port + 29}")
 
-    url = f"http://127.0.0.1:{port}/{APP_HTML_FILE}?v={os.getpid()}"
+    url = f"{app_url(port)}?v={os.getpid()}"
     print(f"SYDRRO-TECH local server: {url}", flush=True)
     print(f"Unified SQLite data source: {DB_PATH}", flush=True)
     print(f"JSON mirror file: {BACKUP_PATH}", flush=True)
 
     if open_browser:
-        threading.Timer(0.6, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.6, lambda: open_browser_url(url)).start()
 
     server.serve_forever()
 
