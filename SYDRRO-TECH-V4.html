@@ -1128,15 +1128,14 @@
 
     function takeValueAfterLabel(lines, label) {
         const normalizedLabel = label.replace(/\s/g, '');
+        const inlineLabelPattern = new RegExp(`${label.split('').join('\\s*')}\\s*[:：]?\\s*(.*)$`);
         for (let i = 0; i < lines.length; i++) {
             const compact = lines[i].replace(/\s/g, '');
             const index = compact.indexOf(normalizedLabel);
             if (index < 0) continue;
 
-            let value = lines[i]
-                .replace(new RegExp(label.split('').join('\\s*')), '')
-                .replace(/^[:：\s]+/, '')
-                .trim();
+            let value = (lines[i].match(inlineLabelPattern) || [])[1] || '';
+            value = value.replace(/^[:：\s]+/, '').trim();
             if (value) return value;
 
             for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
@@ -1148,11 +1147,36 @@
     }
 
     function sanitizeOcrName(value) {
-        return String(value || '')
-            .split(/深度风控查询|风控查询|未验证人脸|已验证人脸|身份证号|支付宝登录账号|支付宝|联系电话|下单所在地|性别/)[0]
-            .replace(/^姓名\s*/g, '')
+        const cleaned = String(value || '')
+            .replace(/\s+/g, '')
+            .replace(/^.*?姓名[:：]?/, '')
+            .split(/深度|风控|查询|未验证人脸|已验证人脸|身份证号|支付宝登录账号|支付宝|联系电话|下单所在地|性别|共租风险|风险模型|租客信息/)[0]
+            .replace(/^(姓名|租客信息|用户信息|客户信息|个人信息|未验证人脸|已验证人脸)+/g, '')
             .replace(/[^\u3400-\u9fff·]/g, '')
             .trim();
+        if (!cleaned) return '';
+        if (cleaned.includes('·')) return cleaned.slice(0, 12);
+        const plausible = cleaned.match(/[\u3400-\u9fff]{2,4}/);
+        return plausible ? plausible[0] : cleaned.slice(0, 4);
+    }
+
+    function extractOcrCustomerName(normalized, lines) {
+        const inlineName = sanitizeOcrName(takeValueAfterLabel(lines, '姓名'));
+        if (inlineName) return inlineName;
+
+        const blockMatch = normalized.match(/姓\s*名\s*[:：]?\s*([^\n]+)/);
+        const blockName = sanitizeOcrName(blockMatch?.[1] || '');
+        if (blockName) return blockName;
+
+        const nameLabelIndex = lines.findIndex(line => /姓\s*名/.test(line));
+        if (nameLabelIndex >= 0) {
+            for (let i = nameLabelIndex + 1; i <= Math.min(nameLabelIndex + 3, lines.length - 1); i++) {
+                const candidate = sanitizeOcrName(lines[i]);
+                if (candidate) return candidate;
+            }
+        }
+
+        return '';
     }
 
     function normalizeOcrDate(value) {
@@ -1197,7 +1221,7 @@
         const normalized = normalizeOcrText(text);
         const lines = normalized.split('\n').map(line => line.trim()).filter(Boolean);
         const orderNo = (normalized.match(/订单号\s*(\d{12,})/) || [])[1] || '';
-        const name = sanitizeOcrName(takeValueAfterLabel(lines, '姓名'));
+        const name = extractOcrCustomerName(normalized, lines);
         const nickname = takeValueAfterLabel(lines, '免押备注');
         const depositAmount = findMoneyNearLabel(lines, /免押金额|押金金额|押金/);
         const phoneLine = takeValueAfterLabel(lines, '联系电话');
