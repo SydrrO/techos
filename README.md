@@ -6,7 +6,13 @@
 
 1. 将业务数据文件命名为 `data.xlsx`，放在本目录。
 2. 双击 `start-local-server.bat`。
-3. 浏览器会自动打开 `SYDRRO-TECH-V3.8.html`。
+3. 浏览器会自动打开 `SYDRRO-TECH-V4.html`。
+
+## GitHub Pages
+
+开启 Pages 后可以访问：
+
+`https://sydrro.github.io/techos/`
 
 ## 数据说明
 

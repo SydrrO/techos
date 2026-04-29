@@ -11,6 +11,7 @@ import webbrowser
 
 ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
+APP_HTML_FILE = "SYDRRO-TECH-V4.html"
 
 
 def is_port_in_use(port):
@@ -111,7 +112,7 @@ def main():
     if server is None:
         raise RuntimeError(f"No available local port from {preferred_port} to {preferred_port + 29}")
 
-    url = f"http://127.0.0.1:{port}/SYDRRO-TECH-V3.8.html?v={os.getpid()}"
+    url = f"http://127.0.0.1:{port}/{APP_HTML_FILE}?v={os.getpid()}"
     print(f"SYDRRO-TECH local server: {url}", flush=True)
     print(f"Auto backup file: {BACKUP_PATH}", flush=True)
 
