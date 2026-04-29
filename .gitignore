@@ -1,6 +1,7 @@
+sydrro-data.sqlite3
+sydrro-data.sqlite3-*
 __pycache__/
-*.pyc
-server-test.*
-chrome-dom.out
-github-upload/
-techos-github-upload*.zip
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+~$*.xlsx

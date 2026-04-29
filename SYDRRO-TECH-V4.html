@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.0">
-    <title>SYDRRO-TECH V6.0 | 智能资产终端</title>
+    <meta name="app-version" content="V6.1">
+    <title>SYDRRO-TECH V6.1 | 智能资产终端</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
@@ -513,7 +513,7 @@
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V6.0</p>
+        <p>INTELLIGENT ASSET OS · V6.1</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -808,7 +808,7 @@
                 <div id="ocr-status" class="ocr-status"></div>
                 <div class="ocr-actions">
                     <button class="ocr-btn light" onclick="closeImageOrderModal()">取消</button>
-                    <button class="ocr-btn primary" onclick="saveImageOrderToXlsx()">写入 data.xlsx</button>
+                    <button class="ocr-btn primary" onclick="saveImageOrderToXlsx()">保存订单</button>
                 </div>
             </div>
         </div>
@@ -855,7 +855,7 @@
 
     const REQUIRED_ORDER_FIELDS = ['机器', '编号', '起租日', '结束日'];
     const LOCAL_DATA_FILE = 'data.xlsx';
-    const BACKUP_API_URL = '/api/backup';
+    const STATE_API_URL = '/api/state';
     const DATA_XLSX_API_URL = '/api/data-xlsx';
     const RECENT_DONE_DAYS = 3;
     const DAY_MS = 86400000;
@@ -960,13 +960,13 @@
     }
 
     function applyOrderRows(rows, validation, options = {}) {
-        const { sourceName = '数据文件', notify = true, seedNotify = false } = options;
+        const { sourceName = '数据文件', notify = true, seedNotify = false, persist = true } = options;
         rawData = rows;
         invalidateLocalComputeCache();
         writeJsonState(STORAGE_KEYS.assetsData, rawData);
         seedInventoryFromOrders({ notify: seedNotify, refresh: false });
         scheduleDashboardUpdate();
-        scheduleAutoBackup();
+        if (persist) scheduleAutoBackup();
 
         if (notify) {
             showToast(validation.invalidDateCount
@@ -1003,28 +1003,37 @@
         }
     }
 
-    window.onload = async () => {
+    function loadBrowserCacheState() {
         shippingStatus = readJsonState(STORAGE_KEYS.shippingStatus, {}) || {};
         returnStatus = readJsonState(STORAGE_KEYS.returnStatus, {}) || {};
         currentActionFilter = localStorage.getItem(STORAGE_KEYS.actionFilter) || 'all';
         if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
         inventoryData = readJsonState(STORAGE_KEYS.inventoryData, []) || [];
         customModels = readJsonState(STORAGE_KEYS.customModels, []) || [];
+        rawData = readJsonState(STORAGE_KEYS.assetsData, []) || [];
+        invalidateLocalComputeCache();
+    }
 
+    function ensureRuntimeDefaults() {
         if (!inventoryData.length) {
             inventoryData = getDefaultInventory();
             writeJsonState(STORAGE_KEYS.inventoryData, inventoryData);
         }
         renderModelOptions();
-
-        rawData = readJsonState(STORAGE_KEYS.assetsData, []) || [];
-        invalidateLocalComputeCache();
+        renderInventoryManager();
         if (rawData.length) {
             scheduleDashboardUpdate();
         }
+    }
 
-        await loadAutoBackup();
-        loadLocalOrderData();
+    window.onload = async () => {
+        loadBrowserCacheState();
+        ensureRuntimeDefaults();
+
+        const hasUnifiedState = await loadAutoBackup();
+        if (!hasUnifiedState || !rawData.length) {
+            await loadLocalOrderData({ persist: true, notify: !rawData.length });
+        }
     };
 
     function switchPage(p) {
@@ -1048,10 +1057,12 @@
     function importOrderFile(file) {
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
+        reader.onload = async (ev) => {
             try {
                 const { rows, validation } = readOrderRowsFromArrayBuffer(ev.target.result);
-                applyOrderRows(rows, validation, { sourceName: file.name || '手动导入文件', notify: true, seedNotify: false });
+                applyOrderRows(rows, validation, { sourceName: file.name || '手动导入文件', notify: true, seedNotify: false, persist: false });
+                await persistUnifiedStateNow();
+                await syncOrderWorkbookMirror().catch(err => console.warn('同步 data.xlsx 镜像失败', err));
             } catch (err) {
                 console.error(err);
                 alert(`导入失败：${err.message || '请检查 Excel 文件格式'}`);
@@ -1060,10 +1071,11 @@
         reader.readAsArrayBuffer(file);
     }
 
-    async function loadLocalOrderData() {
+    async function loadLocalOrderData(options = {}) {
+        const { persist = false, notify = true } = options;
         if (location.protocol === 'file:') {
             console.info(`自动读取 ${LOCAL_DATA_FILE} 需要通过本地服务器访问页面`);
-            return;
+            return false;
         }
 
         try {
@@ -1071,12 +1083,15 @@
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const buffer = await response.arrayBuffer();
             const { rows, validation } = readOrderRowsFromArrayBuffer(buffer);
-            applyOrderRows(rows, validation, { sourceName: LOCAL_DATA_FILE, notify: true, seedNotify: false });
+            applyOrderRows(rows, validation, { sourceName: LOCAL_DATA_FILE, notify, seedNotify: false, persist: false });
+            if (persist) await persistUnifiedStateNow();
+            return true;
         } catch (err) {
             console.warn(`自动同步 ${LOCAL_DATA_FILE} 失败`, err);
             if (!rawData.length) {
                 showToast(`未读取到 ${LOCAL_DATA_FILE}，可先用右下角导入`);
             }
+            return false;
         }
     }
 
@@ -1816,26 +1831,31 @@
         return row;
     }
 
+    function buildOrderWorkbookArrayBuffer(rows) {
+        const finalHeaders = [...ORDER_EXPORT_HEADERS];
+        (rows || []).forEach(row => {
+            Object.keys(row || {}).forEach(key => {
+                if (!finalHeaders.includes(key)) finalHeaders.push(key);
+            });
+        });
+
+        const workbook = XLSX.utils.book_new();
+        const sheet = XLSX.utils.json_to_sheet(rows || [], { header: finalHeaders });
+        XLSX.utils.book_append_sheet(workbook, sheet, 'Sheet1');
+        return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    }
+
+    async function syncOrderWorkbookMirror(rows = rawData) {
+        if (!window.XLSX || location.protocol === 'file:' || location.hostname.endsWith('github.io')) return false;
+        await persistDataWorkbook(buildOrderWorkbookArrayBuffer(rows || []));
+        return true;
+    }
+
     async function appendImageOrderRowsToXlsx(newRows) {
         if (!window.XLSX) throw new Error('Excel 解析库没有加载成功');
         if (!newRows.length) throw new Error('没有可写入的订单');
 
-        let workbook;
-        let sheetName = 'Sheet1';
-        let rows = [];
-        let headers = [...ORDER_EXPORT_HEADERS];
-        try {
-            const response = await fetch(`./${LOCAL_DATA_FILE}?t=${Date.now()}`, { cache: 'no-store' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const buffer = await response.arrayBuffer();
-            workbook = XLSX.read(new Uint8Array(buffer), { type: 'array' });
-            sheetName = workbook.SheetNames[0] || sheetName;
-            const sheet = workbook.Sheets[sheetName];
-            rows = normalizeImportedRows(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
-            headers = getSheetHeaders(sheet);
-        } catch (err) {
-            workbook = XLSX.utils.book_new();
-        }
+        const rows = normalizeImportedRows(rawData || []);
 
         const existingOrderNos = new Set(rows.map(row => String(row['订单号'] || '').trim()).filter(Boolean));
         const incomingOrderNos = newRows.map(row => String(row['订单号'] || '').trim()).filter(Boolean);
@@ -1848,25 +1868,11 @@
         assignDeviceIdsToOrderRows(newRows, rows);
         validateDeviceScheduleBeforeAppend(newRows, rows);
 
-        const finalHeaders = [...headers];
-        ORDER_EXPORT_HEADERS.forEach(header => {
-            if (!finalHeaders.includes(header) && (header !== '订单号' || newRows.some(row => row['订单号']))) finalHeaders.push(header);
-        });
-        newRows.forEach(row => {
-            Object.keys(row).forEach(key => {
-                if (!finalHeaders.includes(key)) finalHeaders.push(key);
-            });
-        });
-
-        rows.push(...newRows);
-        const sheet = XLSX.utils.json_to_sheet(rows, { header: finalHeaders });
-        workbook.Sheets[sheetName] = sheet;
-        if (!workbook.SheetNames.includes(sheetName)) workbook.SheetNames.push(sheetName);
-
-        const output = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        await persistDataWorkbook(output);
-        const { rows: nextRows, validation } = readOrderRowsFromArrayBuffer(output);
-        applyOrderRows(nextRows, validation, { sourceName: LOCAL_DATA_FILE, notify: false, seedNotify: false });
+        const nextRows = [...rows, ...newRows];
+        const validation = validateOrderRows(nextRows);
+        applyOrderRows(nextRows, validation, { sourceName: '统一数据源', notify: false, seedNotify: false, persist: false });
+        await persistUnifiedStateNow();
+        await syncOrderWorkbookMirror(nextRows).catch(err => console.warn('同步 data.xlsx 镜像失败', err));
         return { addedCount: newRows.length };
     }
 
@@ -1877,11 +1883,11 @@
             writeOcrFormFields(fields);
             const newRow = buildImageOrderRow(fields);
             setOcrSaveState('写入中');
-            setOcrStatus('正在写入 data.xlsx...');
+            setOcrStatus('正在保存到统一数据源...');
             await appendImageOrderRowsToXlsx([newRow]);
             setOcrSaveState('已写入');
             setOcrStatus(`已追加 ${newRow['名字']} 的订单`);
-            showToast('手动订单已写入 data.xlsx');
+            showToast('手动订单已保存');
         } catch (err) {
             console.error(err);
             setOcrSaveState('写入失败');
@@ -2410,7 +2416,7 @@
     function buildBackupPayload() {
         return {
             app: 'SYDRRO-TECH',
-            version: 2,
+            version: 3,
             exportedAt: new Date().toISOString(),
             rawData: rawData || [],
             shippingStatus: shippingStatus || {},
@@ -2446,15 +2452,31 @@
     async function loadAutoBackup() {
         if (location.protocol === 'file:') return false;
         try {
-            const response = await fetch(BACKUP_API_URL, { cache: 'no-store' });
+            const response = await fetch(STATE_API_URL, { cache: 'no-store' });
             if (!response.ok) return false;
             const backup = await response.json();
             applyBackupPayload(backup, { notify: false });
             return true;
         } catch (err) {
-            console.warn('自动读取 JSON 备份失败', err);
+            console.warn('自动读取统一数据源失败', err);
             return false;
         }
+    }
+
+    async function persistUnifiedStateNow() {
+        if (location.protocol === 'file:') return false;
+        saveAllLocalState();
+        const json = JSON.stringify(buildBackupPayload());
+        const response = await fetch(STATE_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: json
+        });
+        if (!response.ok) {
+            const message = await response.text();
+            throw new Error(message || `HTTP ${response.status}`);
+        }
+        return true;
     }
 
     function saveAutoBackup() {
@@ -2463,14 +2485,14 @@
         const json = JSON.stringify(buildBackupPayload());
         const blob = new Blob([json], { type: 'application/json' });
 
-        if (navigator.sendBeacon && navigator.sendBeacon(BACKUP_API_URL, blob)) return;
+        if (navigator.sendBeacon && navigator.sendBeacon(STATE_API_URL, blob)) return;
 
-        fetch(BACKUP_API_URL, {
+        fetch(STATE_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: json,
             keepalive: true
-        }).catch(err => console.warn('自动写入 JSON 备份失败', err));
+        }).catch(err => console.warn('自动写入统一数据源失败', err));
     }
 
     function scheduleAutoBackup() {
