@@ -818,6 +818,13 @@
         1000: 'IXUS130',
         1111: 'GR3'
     };
+    const SHIP_ARRIVAL_BUFFER_DAYS = 1;
+    const DEFAULT_SHIP_TRANSIT_DAYS = 2;
+    const SHIPPING_TRANSIT_RULES = [
+        { days: 0, pattern: /自提|同城|本地|无需发货|不用发货/ },
+        { days: 3, pattern: /新疆|西藏|青海|甘肃|宁夏|内蒙古|黑龙江|吉林|海南|香港|澳门|台湾/ },
+        { days: 2, pattern: /云南|贵州|四川|重庆|广西|广东|福建|江西|湖南|湖北|河南|河北|山东|山西|陕西|辽宁/ }
+    ];
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -2396,6 +2403,33 @@
         return conflictMap;
     }
 
+    function getShippingTransitDays(area) {
+        const text = String(area || '').trim();
+        const rule = SHIPPING_TRANSIT_RULES.find(item => item.pattern.test(text));
+        return rule ? rule.days : DEFAULT_SHIP_TRANSIT_DAYS;
+    }
+
+    function getShippingPlan(row, start) {
+        const transitDays = getShippingTransitDays(row?.['地区']);
+        const arrivalBufferDays = transitDays > 0 ? SHIP_ARRIVAL_BUFFER_DAYS : 0;
+        const arrivalDate = new Date(start.getTime() - arrivalBufferDays * DAY_MS);
+        arrivalDate.setHours(0, 0, 0, 0);
+        const shipDate = new Date(arrivalDate.getTime() - transitDays * DAY_MS);
+        shipDate.setHours(0, 0, 0, 0);
+        return {
+            transitDays,
+            arrivalBufferDays,
+            leadDays: transitDays + arrivalBufferDays,
+            shipDate,
+            arrivalDate
+        };
+    }
+
+    function getShippingPlanText(plan, start) {
+        if (!plan || plan.transitDays <= 0) return `${formatDateStr(start)} 可交付`;
+        return `${formatDateStr(plan.shipDate)} 发 · ${formatDateStr(plan.arrivalDate)} 前到`;
+    }
+
     function getNormalizedOrderAnalysis() {
         if (orderAnalysisCache.revision === computeRevision) return orderAnalysisCache;
 
@@ -2408,10 +2442,10 @@
             const start = new Date(rawStart); start.setHours(0, 0, 0, 0);
             const endDay = new Date(rawEnd); endDay.setHours(0, 0, 0, 0);
             const end = new Date(rawEnd); end.setHours(23, 59, 59, 999);
-            const prepWindow = new Date(start.getTime() - 2 * DAY_MS);
-            prepWindow.setHours(0, 0, 0, 0);
+            const shippingPlan = getShippingPlan(r, start);
+            const prepWindow = new Date(shippingPlan.shipDate);
 
-            normalizedRows.push({ r, idx, start, endDay, end, prepWindow });
+            normalizedRows.push({ r, idx, start, endDay, end, prepWindow, shippingPlan });
         });
 
         orderAnalysisCache = {
@@ -2467,7 +2501,7 @@
 
         const { normalizedRows, conflictMap } = getNormalizedOrderAnalysis();
 
-        normalizedRows.forEach(({ r, idx, start, endDay, end, prepWindow }) => {
+        normalizedRows.forEach(({ r, idx, start, endDay, end, prepWindow, shippingPlan }) => {
             const rent = parseFloat(r['租金']) || 0;
             const modelName = String(r['机器'] || '未知机型').trim().toUpperCase();
             const orderKey = getOrderKey(r);
@@ -2534,10 +2568,11 @@
                 }
             }
 
-            // 左侧：发货指令。进入备货期后，只要未确认发货，就持续提醒到订单结束。
+            // 左侧：发货指令。进入建议发货日后，只要未确认发货，就持续提醒到订单结束。
             const shipStatusRecord = readStatusRecord(shippingStatus, orderKey);
             const isShipped = shipStatusRecord.status === 'shipped';
             if (realToday >= prepWindow && realToday <= end) {
+                const shippingPlanText = getShippingPlanText(shippingPlan, start);
                 const shipCard = `
                     <div class="action-card ${isShipped ? 'tone-shipped' : 'tone-ship'}">
                         <div class="ship-topbar">
@@ -2548,7 +2583,7 @@
                         </div>
                         <div class="action-main">${safeMachine} #${safeId}</div>
                         <div class="action-meta">${safePlatform} · ${safeCustomer}</div>
-                        <div class="action-sub">${safeArea} · ${safeStart} 始${safeNickname}</div>
+                        <div class="action-sub">${safeArea} · ${shippingPlanText} · ${safeStart} 始${safeNickname}</div>
                     </div>`;
                 if (!isShipped) {
                     cShip++;
@@ -2588,7 +2623,7 @@
             }
 
             // 判断条件：查询区间的开始时间(qStart) 早于或等于 机器归还日(end)
-            // 且 查询区间的结束时间(qEnd) 晚于或等于 机器备货发货日(prepWindow)
+            // 且 查询区间的结束时间(qEnd) 晚于或等于建议发货日(prepWindow)
             if (qStart <= end && qEnd >= prepWindow) {
 
                 // 1. 在右侧把这台机器锁死，不再显示为 READY
