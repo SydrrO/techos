@@ -706,8 +706,8 @@
                         <input id="ocr-model" list="ocr-model-options" placeholder="如 IXUS130">
                     </div>
                     <div class="form-field">
-                        <label>编号</label>
-                        <input id="ocr-device-id" placeholder="如 1">
+                        <label>编号（自动）</label>
+                        <input id="ocr-device-id" placeholder="自动分配，可手动改">
                     </div>
                     <div class="form-field">
                         <label>起租日</label>
@@ -1329,15 +1329,17 @@
             return;
         }
         const fields = extractImageOrderFields(text);
-        const mergedFields = { ...readOcrFormFields(), ...compactExtractedFields(fields), rawText: text };
-        writeOcrFormFields(mergedFields);
+        let mergedFields = { ...readOcrFormFields(), ...compactExtractedFields(fields), rawText: text };
         if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
             imageOrderBatch[activeImageOrderIndex].fields = mergedFields;
-            imageOrderBatch[activeImageOrderIndex].status = getImageOrderMissingFields(mergedFields).length ? '待补全' : '待写入';
-            renderImageOrderBatch();
+            autoAssignImageOrderQueueDeviceIds();
+            mergedFields = imageOrderBatch[activeImageOrderIndex].fields;
+        } else {
+            assignDeviceIdToFields(mergedFields);
+            writeOcrFormFields(mergedFields);
         }
-        setOcrSaveState('待写入');
-        setOcrStatus(getDepositInferenceMessage(fields, '已从文本提取字段'));
+        setOcrSaveState(activeImageOrderIndex >= 0 ? imageOrderBatch[activeImageOrderIndex]?.status || '待写入' : '待写入');
+        setOcrStatus(getDepositInferenceMessage(mergedFields, mergedFields.deviceId ? `已从文本提取字段，自动分配 #${mergedFields.deviceId}` : '已从文本提取字段'));
     }
 
     async function recognizeImageOrderFile(file, onProgress) {
@@ -1381,14 +1383,18 @@
             }
             setOcrStatus('OCR 识别中...');
             const text = await recognizeImageOrderFile(file, progress => setOcrStatus(`OCR 识别中 ${progress}%`));
-            const extracted = entry
-                ? applyOcrResultToEntry(entry, text)
-                : { ...extractImageOrderFields(text), rawText: text };
-            if (!entry) setOcrField('ocr-raw-text', text);
-            if (entry) writeOcrFormFields(entry.fields);
-            else fillImageOrderFields(extracted);
+            let extracted;
+            if (entry) {
+                extracted = applyOcrResultToEntry(entry, text);
+                autoAssignImageOrderQueueDeviceIds();
+                writeOcrFormFields(entry.fields);
+            } else {
+                extracted = { ...readOcrFormFields(), ...compactExtractedFields(extractImageOrderFields(text)), rawText: text };
+                assignDeviceIdToFields(extracted);
+                writeOcrFormFields(extracted);
+            }
             setOcrSaveState(entry?.status || '待写入');
-            setOcrStatus(getDepositInferenceMessage(extracted, '识别完成'));
+            setOcrStatus(getDepositInferenceMessage(extracted, extracted.deviceId ? `识别完成，自动分配 #${extracted.deviceId}` : '识别完成'));
             renderImageOrderBatch();
         } catch (err) {
             console.error(err);
@@ -1422,9 +1428,10 @@
                     setOcrStatus(`第 ${i + 1}/${imageOrderBatch.length} 张识别中 ${progress}%`);
                 });
                 const extracted = applyOcrResultToEntry(entry, text);
+                autoAssignImageOrderQueueDeviceIds();
                 writeOcrFormFields(entry.fields);
                 setOcrSaveState(entry.status);
-                setOcrStatus(getDepositInferenceMessage(extracted, `第 ${i + 1}/${imageOrderBatch.length} 张识别完成`));
+                setOcrStatus(getDepositInferenceMessage(entry.fields, entry.fields.deviceId ? `第 ${i + 1}/${imageOrderBatch.length} 张识别完成，自动分配 #${entry.fields.deviceId}` : `第 ${i + 1}/${imageOrderBatch.length} 张识别完成`));
             } catch (err) {
                 console.error(err);
                 entry.status = '识别失败';
@@ -1522,6 +1529,196 @@
         return missing;
     }
 
+    function normalizeDayDate(value) {
+        const parsed = parseDate(value);
+        if (!parsed) return null;
+        const date = new Date(parsed);
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    function getOrderPeriodFromRow(row) {
+        const start = normalizeDayDate(row?.['起租日']);
+        const end = normalizeDayDate(row?.['结束日']);
+        if (!start || !end || start > end) return null;
+        return { start, end };
+    }
+
+    function getOrderPeriodFromFields(fields) {
+        const startDate = normalizeOcrDate(fields?.startDate) || fields?.startDate;
+        const endDate = normalizeOcrDate(fields?.endDate) || fields?.endDate;
+        return getOrderPeriodFromRow({ '起租日': startDate, '结束日': endDate });
+    }
+
+    function periodsOverlap(a, b) {
+        return Boolean(a && b && a.start <= b.end && b.start <= a.end);
+    }
+
+    function getDeviceScheduleRowFromFields(fields) {
+        return {
+            '机器': fields?.model || '',
+            '编号': fields?.deviceId || '',
+            '起租日': normalizeOcrDate(fields?.startDate) || fields?.startDate || '',
+            '结束日': normalizeOcrDate(fields?.endDate) || fields?.endDate || ''
+        };
+    }
+
+    function getAssignableDevicesForModel(model, existingRows = rawData) {
+        const targetModel = String(model || '').trim().toUpperCase();
+        if (!targetModel) return [];
+
+        const seen = new Set();
+        const devices = [];
+        const baseInventory = Array.isArray(inventoryData) && inventoryData.length ? inventoryData : getDefaultInventory();
+        const unavailableKeys = new Set(baseInventory.map(normalizeInventoryItem)
+            .filter(item => item.status !== 'normal')
+            .map(item => normalizeKey(item.model, item.id))
+            .filter(Boolean));
+        const addDevice = item => {
+            const normalized = normalizeInventoryItem(item);
+            if (String(normalized.model || '').trim().toUpperCase() !== targetModel) return;
+            const key = normalizeKey(normalized.model, normalized.id);
+            if (!key || seen.has(key) || unavailableKeys.has(key)) return;
+            seen.add(key);
+            devices.push(normalized);
+        };
+
+        baseInventory.map(normalizeInventoryItem).forEach(item => {
+            if (item.status === 'normal') addDevice(item);
+        });
+        (existingRows || []).forEach(row => {
+            if (row?.['机器'] && row?.['编号']) addDevice({ model: row['机器'], id: row['编号'], status: 'normal' });
+        });
+
+        return devices.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true, sensitivity: 'base' }));
+    }
+
+    function buildDeviceBookings(existingRows = rawData, reservedRows = []) {
+        return [...(existingRows || []), ...(reservedRows || [])].map(row => {
+            const key = normalizeKey(row?.['机器'], row?.['编号']);
+            const period = getOrderPeriodFromRow(row);
+            if (!key || !period) return null;
+            return { key, ...period, row };
+        }).filter(Boolean);
+    }
+
+    function findAvailableDeviceIdForFields(fields, options = {}) {
+        const { existingRows = rawData, reservedRows = [], keepExisting = true } = options;
+        const model = String(fields?.model || '').trim();
+        const period = getOrderPeriodFromFields(fields);
+        if (!model || !period) return { deviceId: '', status: 'pending', reason: '缺少机型或日期' };
+
+        const bookings = buildDeviceBookings(existingRows, reservedRows);
+        const isAvailable = id => {
+            const key = normalizeKey(model, id);
+            return !bookings.some(booking => booking.key === key && periodsOverlap(period, booking));
+        };
+
+        const currentId = String(fields?.deviceId || '').trim();
+        if (keepExisting && currentId && isAvailable(currentId)) {
+            return { deviceId: currentId, status: 'kept' };
+        }
+
+        const available = getAssignableDevicesForModel(model, existingRows).find(device => isAvailable(device.id));
+        if (available) return { deviceId: String(available.id), status: 'assigned' };
+
+        return {
+            deviceId: '',
+            status: 'unavailable',
+            reason: `${String(model).toUpperCase()} 在 ${fields.startDate || '-'} ~ ${fields.endDate || '-'} 没有空闲编号`
+        };
+    }
+
+    function assignDeviceIdToFields(fields, options = {}) {
+        const result = findAvailableDeviceIdForFields(fields, options);
+        if (result.deviceId) {
+            fields.deviceId = result.deviceId;
+        } else if (result.status === 'unavailable') {
+            fields.deviceId = '';
+        }
+        return result;
+    }
+
+    function updateBatchEntryStatus(entry, assignmentResult = null) {
+        if (!entry || entry.status === '识别中' || entry.status === '已写入' || entry.status === '识别失败') return;
+        if (assignmentResult?.status === 'unavailable') {
+            entry.status = '无可用编号';
+            return;
+        }
+        entry.status = getImageOrderMissingFields(entry.fields).length ? '待补全' : '待写入';
+    }
+
+    function autoAssignImageOrderQueueDeviceIds() {
+        if (!imageOrderBatch.length) return;
+        const reservedRows = [];
+        imageOrderBatch.forEach(entry => {
+            if (!entry || entry.status === '已写入' || entry.status === '识别失败') return;
+            entry.fields = { ...createEmptyImageOrderFields(), ...(entry.fields || {}) };
+            const result = assignDeviceIdToFields(entry.fields, { reservedRows });
+            updateBatchEntryStatus(entry, result);
+
+            const scheduleRow = getDeviceScheduleRowFromFields(entry.fields);
+            if (scheduleRow['机器'] && scheduleRow['编号'] && getOrderPeriodFromRow(scheduleRow)) {
+                reservedRows.push(scheduleRow);
+            }
+        });
+        if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
+            writeOcrFormFields(imageOrderBatch[activeImageOrderIndex].fields);
+            setOcrSaveState(imageOrderBatch[activeImageOrderIndex].status || '待写入');
+        }
+        renderImageOrderBatch();
+    }
+
+    function autoAssignActiveImageOrderDeviceId() {
+        if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
+            syncActiveImageOrderFromForm();
+            autoAssignImageOrderQueueDeviceIds();
+            return;
+        }
+
+        const fields = readOcrFormFields();
+        const result = assignDeviceIdToFields(fields);
+        writeOcrFormFields(fields);
+        if (result.status === 'assigned') setOcrStatus(`已自动分配 #${fields.deviceId}`);
+        if (result.status === 'unavailable') setOcrStatus(result.reason);
+    }
+
+    function validateDeviceScheduleBeforeAppend(newRows, existingRows) {
+        const reservedRows = [];
+        newRows.forEach(row => {
+            const key = normalizeKey(row['机器'], row['编号']);
+            const period = getOrderPeriodFromRow(row);
+            if (!key || !period) throw new Error(`${row['名字'] || '新订单'} 缺少可用编号或日期`);
+
+            const conflict = buildDeviceBookings(existingRows, reservedRows).find(booking =>
+                booking.key === key && periodsOverlap(period, booking)
+            );
+            if (conflict) {
+                const conflictRow = conflict.row || {};
+                throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${conflictRow['名字'] || '其他订单'} 占用`);
+            }
+            reservedRows.push(row);
+        });
+    }
+
+    function assignDeviceIdsToOrderRows(newRows, existingRows) {
+        const reservedRows = [];
+        newRows.forEach(row => {
+            const fields = {
+                model: row['机器'] || '',
+                deviceId: row['编号'] || '',
+                startDate: row['起租日'] || '',
+                endDate: row['结束日'] || ''
+            };
+            assignDeviceIdToFields(fields, { existingRows, reservedRows });
+            row['编号'] = fields.deviceId || '';
+
+            if (row['机器'] && row['编号'] && getOrderPeriodFromRow(row)) {
+                reservedRows.push(row);
+            }
+        });
+    }
+
     function buildImageOrderRow(sourceFields = null) {
         const fields = sourceFields || readOcrFormFields();
         const row = fieldsToImageOrderRow(fields);
@@ -1559,6 +1756,8 @@
         if (duplicateOrderNos.length && !confirm(`发现重复订单号：${[...new Set(duplicateOrderNos)].join('、')}，仍然追加吗？`)) {
             throw new Error('已取消写入');
         }
+        assignDeviceIdsToOrderRows(newRows, rows);
+        validateDeviceScheduleBeforeAppend(newRows, rows);
 
         const finalHeaders = [...headers];
         ORDER_EXPORT_HEADERS.forEach(header => {
@@ -1585,9 +1784,16 @@
     async function saveImageOrderToXlsx() {
         try {
             syncActiveImageOrderFromForm();
-            const fields = activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]
+            let fields = activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]
                 ? imageOrderBatch[activeImageOrderIndex].fields
                 : readOcrFormFields();
+            if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
+                autoAssignImageOrderQueueDeviceIds();
+                fields = imageOrderBatch[activeImageOrderIndex].fields;
+            } else {
+                assignDeviceIdToFields(fields);
+                writeOcrFormFields(fields);
+            }
             const newRow = buildImageOrderRow(fields);
             setOcrSaveState('写入中');
             setOcrStatus('正在写入 data.xlsx...');
@@ -1611,6 +1817,7 @@
         try {
             if (!imageOrderBatch.length) throw new Error('还没有批量识别队列');
             syncActiveImageOrderFromForm();
+            autoAssignImageOrderQueueDeviceIds();
             const incomplete = [];
             const newRows = [];
             imageOrderBatch.forEach((entry, index) => {
@@ -2547,6 +2754,9 @@
     document.getElementById('image-order-file').addEventListener('change', (e) => {
         handleImageOrderFiles(e.target.files);
         e.target.value = '';
+    });
+    ['ocr-model', 'ocr-start-date', 'ocr-end-date'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', autoAssignActiveImageOrderDeviceId);
     });
     document.getElementById('image-order-modal').addEventListener('click', (e) => {
         if (e.target.id === 'image-order-modal') closeImageOrderModal();
