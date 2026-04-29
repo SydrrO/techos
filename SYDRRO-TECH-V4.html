@@ -665,6 +665,10 @@
                         <input id="ocr-platform" value="闲鱼" readonly>
                     </div>
                     <div class="form-field">
+                        <label>押金</label>
+                        <input id="ocr-deposit" readonly>
+                    </div>
+                    <div class="form-field">
                         <label>姓名</label>
                         <input id="ocr-name">
                     </div>
@@ -755,6 +759,10 @@
     const RECENT_DONE_DAYS = 3;
     const DAY_MS = 86400000;
     const ORDER_EXPORT_HEADERS = ['名字', '昵称', '平台', '手机号码', '地区', '机器', '编号', '起租日', '结束日', '租金', '订单号'];
+    const DEPOSIT_MODEL_MAP = {
+        1000: 'IXUS130',
+        1111: 'GR3'
+    };
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, ch => ({
@@ -1017,6 +1025,27 @@
         return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
     }
 
+    function normalizeMoneyAmount(value) {
+        const match = String(value || '').replace(/,/g, '').match(/[¥￥]?\s*(\d+(?:\.\d{1,2})?)/);
+        return match ? Number(match[1]) : null;
+    }
+
+    function findMoneyNearLabel(lines, labelPattern) {
+        for (let i = 0; i < lines.length; i++) {
+            if (!labelPattern.test(lines[i].replace(/\s/g, ''))) continue;
+            for (let j = i; j <= Math.min(i + 2, lines.length - 1); j++) {
+                const amount = normalizeMoneyAmount(lines[j]);
+                if (amount !== null) return amount;
+            }
+        }
+        return null;
+    }
+
+    function inferModelFromDeposit(depositAmount) {
+        if (depositAmount === null || Number.isNaN(depositAmount)) return '';
+        return DEPOSIT_MODEL_MAP[Math.round(Number(depositAmount))] || '';
+    }
+
     function findDateNearLabel(lines, labelPattern) {
         for (let i = 0; i < lines.length; i++) {
             if (!labelPattern.test(lines[i])) continue;
@@ -1034,6 +1063,7 @@
         const orderNo = (normalized.match(/订单号\s*(\d{12,})/) || [])[1] || '';
         const name = takeValueAfterLabel(lines, '姓名').replace(/\s/g, '');
         const nickname = takeValueAfterLabel(lines, '免押备注');
+        const depositAmount = findMoneyNearLabel(lines, /免押金额|押金金额|押金/);
         const phoneLine = takeValueAfterLabel(lines, '联系电话');
         const phoneMatch = (phoneLine.match(/1\d[\d\s-]{8,}\d/) || normalized.match(/1\d[\d\s-]{8,}\d/g) || [])[0] || '';
 
@@ -1041,6 +1071,8 @@
             orderNo,
             name,
             nickname,
+            depositAmount,
+            model: inferModelFromDeposit(depositAmount),
             phone: phoneMatch.replace(/\D/g, ''),
             startDate: findDateNearLabel(lines, /租[赁賃].*开始/),
             endDate: findDateNearLabel(lines, /租[赁賃].*结束/)
@@ -1051,10 +1083,23 @@
         if (fields.orderNo) setOcrField('ocr-order-no', fields.orderNo);
         if (fields.name) setOcrField('ocr-name', fields.name);
         if (fields.nickname) setOcrField('ocr-nickname', fields.nickname);
+        if (fields.depositAmount !== null && fields.depositAmount !== undefined) {
+            setOcrField('ocr-deposit', Number(fields.depositAmount).toFixed(2));
+        }
+        if (fields.model) setOcrField('ocr-model', fields.model);
         if (fields.phone) setOcrField('ocr-phone', fields.phone);
         if (fields.startDate) setOcrField('ocr-start-date', fields.startDate);
         if (fields.endDate) setOcrField('ocr-end-date', fields.endDate);
         setOcrField('ocr-platform', '闲鱼');
+    }
+
+    function getDepositInferenceMessage(fields, fallbackMessage) {
+        if (fields?.depositAmount !== null && fields?.depositAmount !== undefined) {
+            return fields.model
+                ? `已根据押金 ${Number(fields.depositAmount).toFixed(2)} 自动选择 ${fields.model}`
+                : `押金 ${Number(fields.depositAmount).toFixed(2)} 未匹配机型，请手动填写机器`;
+        }
+        return fallbackMessage;
     }
 
     function extractImageOrderFromText() {
@@ -1063,9 +1108,10 @@
             setOcrStatus('没有可提取的 OCR 文本');
             return;
         }
-        fillImageOrderFields(extractImageOrderFields(text));
+        const fields = extractImageOrderFields(text);
+        fillImageOrderFields(fields);
         setOcrSaveState('待写入');
-        setOcrStatus('已从文本提取字段');
+        setOcrStatus(getDepositInferenceMessage(fields, '已从文本提取字段'));
     }
 
     async function runImageOrderOcr() {
@@ -1089,9 +1135,10 @@
             });
             const text = normalizeOcrText(result?.data?.text || '');
             setOcrField('ocr-raw-text', text);
-            fillImageOrderFields(extractImageOrderFields(text));
+            const fields = extractImageOrderFields(text);
+            fillImageOrderFields(fields);
             setOcrSaveState('待写入');
-            setOcrStatus('识别完成');
+            setOcrStatus(getDepositInferenceMessage(fields, '识别完成'));
         } catch (err) {
             console.error(err);
             setOcrStatus('识别失败，可手动粘贴文本后提取');
