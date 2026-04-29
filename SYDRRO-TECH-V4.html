@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V5.0">
-    <title>SYDRRO-TECH V5.0 | 智能资产终端</title>
+    <meta name="app-version" content="V6.0">
+    <title>SYDRRO-TECH V6.0 | 智能资产终端</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -132,16 +131,29 @@
         #scheduling .card > #free-list,
         #scheduling .card > .table-scroll { flex: 1; }
         #scheduling .table-scroll { max-height: none; overflow: visible; border-radius: 14px; }
-        #scheduling .table-scroll-wide { overflow: visible; }
+        #scheduling .table-scroll-wide { overflow: visible; border-color: #e6edf6; box-shadow: inset 0 1px 0 rgba(255,255,255,0.8); }
         #scheduling #main-table { min-width: 0; table-layout: fixed; }
-        #main-table th:nth-child(1), #main-table td:nth-child(1) { width: 42%; }
-        #main-table th:nth-child(2), #main-table td:nth-child(2) { width: 22%; }
-        #main-table th:nth-child(3), #main-table td:nth-child(3) { width: 13%; }
-        #main-table th:nth-child(4), #main-table td:nth-child(4) { width: 23%; }
-        #main-table td { word-break: break-word; }
-        .schedule-customer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: 900; }
-        .schedule-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; color: #7e8794; font-size: 11px; font-weight: 800; line-height: 1.35; }
-        .schedule-meta span { display: inline-flex; max-width: 100%; min-width: 0; padding: 2px 7px; border-radius: 999px; background: #f1f5f9; color: #64748b; word-break: break-word; }
+        #main-table th:nth-child(1), #main-table td:nth-child(1) { width: 43%; }
+        #main-table th:nth-child(2), #main-table td:nth-child(2) { width: 19%; }
+        #main-table th:nth-child(3), #main-table td:nth-child(3) { width: 14%; }
+        #main-table th:nth-child(4), #main-table td:nth-child(4) { width: 24%; }
+        #main-table th { padding: 13px 18px; background: linear-gradient(180deg, #f8fbff, #f3f7fc); color: #768396; font-weight: 900; }
+        #main-table th:nth-child(n+2), #main-table td:nth-child(n+2) { text-align: center; }
+        #main-table td { padding: 15px 18px; word-break: break-word; vertical-align: middle; }
+        #main-table tbody tr:not(.conflict-row):not(.inventory-warning-row):nth-child(even) { background: #fbfdff; }
+        #main-table tbody tr:hover { background: rgba(0,122,255,0.045); }
+        .schedule-customer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 900; line-height: 1.25; }
+        .schedule-customer::before { content: ""; width: 4px; height: 22px; border-radius: 999px; background: linear-gradient(180deg, #007aff, #34c759); flex: 0 0 auto; }
+        .schedule-customer .customer-name { color: #151922; font-size: 14px; }
+        .schedule-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-left: 12px; color: #7e8794; font-size: 11px; font-weight: 800; line-height: 1.35; }
+        .schedule-meta span { display: inline-flex; max-width: 100%; min-width: 0; padding: 3px 8px; border-radius: 999px; background: #eef4fb; color: #5d6f86; word-break: break-word; }
+        .schedule-meta .schedule-note { background: rgba(52,199,89,0.10); color: #23864a; }
+        .schedule-device,
+        .schedule-id,
+        .schedule-period { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-weight: 900; line-height: 1; white-space: nowrap; }
+        .schedule-device { min-width: 74px; padding: 7px 11px; color: #006ee6; background: rgba(0,122,255,0.09); border: 1px solid rgba(0,122,255,0.12); }
+        .schedule-id { min-width: 46px; padding: 7px 10px; color: #20242b; background: #f4f7fb; border: 1px solid #e6edf6; }
+        .schedule-period { min-width: 112px; padding: 7px 12px; color: #365f86; background: linear-gradient(180deg, #f4f9ff, #edf5ff); border: 1px solid #dbe9f8; font-size: 12px; }
         #action-list { max-height: none; overflow: visible; padding-right: 0; }
         .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll::-webkit-scrollbar-thumb { background: #d8e0ea; border-radius: 999px; }
@@ -193,6 +205,9 @@
         .conflict-mark { display:inline-block; color:#ff3b30; font-size:10px; border:1px solid rgba(255,59,48,0.35); background:rgba(255,59,48,0.08); padding:2px 6px; border-radius:4px; margin-left:8px; font-weight:800; }
         .conflict-detail { display:block; margin-top:6px; font-size:10px; line-height:1.45; color:#d92d20; font-weight:700; }
         .conflict-detail span { display:block; margin-top:2px; }
+        .inventory-warning-row { background: rgba(255,149,0,0.07); }
+        .inventory-warning-mark { display:inline-block; color:#d86f00; font-size:10px; border:1px solid rgba(255,149,0,0.36); background:rgba(255,149,0,0.10); padding:2px 6px; border-radius:4px; margin-left:8px; font-weight:800; }
+        .inventory-warning-detail { display:block; margin-top:6px; font-size:10px; line-height:1.45; color:#b45309; font-weight:800; }
         .stock-item { background: linear-gradient(180deg, #fff, #f8fafc); border-radius: 14px; margin-bottom: 10px; padding: 11px 14px; border: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; transition: .2s; }
         .stock-item:hover { transform: translateY(-1px); border-color: rgba(52,199,89,0.22); box-shadow: 0 8px 18px rgba(15,23,42,0.06); }
         .stock-tag { background: #e2e8f0; color: #4a5568; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 5px; }
@@ -430,7 +445,7 @@
         }
         .ocr-panel-title { font-weight: 900; font-size: 18px; color: var(--text-main); }
         .ocr-close { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #eef2f7; color: #475467; font-size: 20px; cursor: pointer; }
-        .ocr-body { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr); gap: 18px; padding: 20px; }
+        .ocr-body { display: grid; grid-template-columns: 1fr; gap: 18px; padding: 20px; }
         .ocr-upload-box {
             border: 1px dashed #cbd5e1; border-radius: 16px; min-height: 240px; background: #f8fafc;
             display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; transition:.2s;
@@ -498,7 +513,7 @@
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V5.0</p>
+        <p>INTELLIGENT ASSET OS · V6.0</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -547,7 +562,7 @@
             <div class="card">
                 <div class="card-head">
                     <div class="card-title">🗓 资产占用档期明细</div>
-                    <button class="card-tool-btn" onclick="openImageOrderModal()">图片录单</button>
+                    <button class="card-tool-btn" onclick="openImageOrderModal()">手动录单</button>
                 </div>
                 <div class="table-scroll table-scroll-wide">
                     <table id="main-table">
@@ -736,37 +751,18 @@
 <div id="image-order-modal" class="modal-backdrop">
     <div class="ocr-panel">
         <div class="ocr-panel-head">
-            <div class="ocr-panel-title">图片录单</div>
+            <div class="ocr-panel-title">手动录单</div>
             <button class="ocr-close" onclick="closeImageOrderModal()">×</button>
         </div>
         <div class="ocr-body">
             <div>
-                <div class="ocr-upload-box" onclick="document.getElementById('image-order-file').click()">
-                    <div id="ocr-upload-empty" class="ocr-upload-empty">选择订单截图</div>
-                    <img id="ocr-preview" alt="订单截图预览">
-                </div>
-                <div class="ocr-tools">
-                    <button class="ocr-btn primary" onclick="document.getElementById('image-order-file').click()">选择图片</button>
-                    <button class="ocr-btn light" onclick="runImageOrderOcr()">识别当前</button>
-                    <button class="ocr-btn light" onclick="runBatchImageOrderOcr()">识别全部</button>
-                    <button class="ocr-btn light" onclick="extractImageOrderFromText()">提取文本</button>
-                </div>
-                <div id="ocr-status" class="ocr-status"></div>
-            </div>
-
-            <div>
                 <div class="ocr-form">
                     <div class="form-field">
-                        <label>订单号</label>
-                        <input id="ocr-order-no">
-                    </div>
-                    <div class="form-field">
                         <label>平台</label>
-                        <input id="ocr-platform" value="闲鱼" readonly>
-                    </div>
-                    <div class="form-field">
-                        <label>押金</label>
-                        <input id="ocr-deposit" readonly>
+                        <select id="ocr-platform">
+                            <option value="闲鱼">闲鱼</option>
+                            <option value="微信代理">微信代理</option>
+                        </select>
                     </div>
                     <div class="form-field">
                         <label>姓名</label>
@@ -780,7 +776,7 @@
                         <label>昵称</label>
                         <input id="ocr-nickname">
                     </div>
-                    <div class="form-field">
+                    <div class="form-field full">
                         <label>发货地</label>
                         <input id="ocr-area">
                     </div>
@@ -794,11 +790,11 @@
                     </div>
                     <div class="form-field">
                         <label>起租日</label>
-                        <input id="ocr-start-date" placeholder="2026-05-01">
+                        <input id="ocr-start-date" type="date">
                     </div>
                     <div class="form-field">
                         <label>结束日</label>
-                        <input id="ocr-end-date" placeholder="2026-05-05">
+                        <input id="ocr-end-date" type="date">
                     </div>
                     <div class="form-field">
                         <label>租金</label>
@@ -808,49 +804,16 @@
                         <label>状态</label>
                         <input id="ocr-save-state" value="待写入" readonly>
                     </div>
-                    <div class="form-field full">
-                        <label>OCR 原文</label>
-                        <textarea id="ocr-raw-text"></textarea>
-                    </div>
                 </div>
+                <div id="ocr-status" class="ocr-status"></div>
                 <div class="ocr-actions">
                     <button class="ocr-btn light" onclick="closeImageOrderModal()">取消</button>
-                    <button class="ocr-btn dark" onclick="saveImageOrderToXlsx()">写入 data.xlsx</button>
-                    <button class="ocr-btn primary" onclick="saveBatchImageOrdersToXlsx()">批量写入完整订单</button>
-                </div>
-            </div>
-            <div class="ocr-batch-panel">
-                <div class="ocr-batch-head">
-                    <div class="ocr-batch-title">批量识别队列</div>
-                    <button class="ocr-btn light" onclick="clearImageOrderBatch()">清空队列</button>
-                </div>
-                <div class="ocr-batch-table-wrap">
-                    <table class="ocr-batch-table">
-                        <thead>
-                            <tr>
-                                <th style="width:42px;">#</th>
-                                <th>文件</th>
-                                <th>姓名</th>
-                                <th>电话</th>
-                                <th>机器</th>
-                                <th style="width:86px;">编号</th>
-                                <th>起租</th>
-                                <th>结束</th>
-                                <th style="width:96px;">租金</th>
-                                <th>发货地</th>
-                                <th style="width:86px;">状态</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ocr-batch-body">
-                            <tr><td colspan="11" class="empty-row">还没有选择图片</td></tr>
-                        </tbody>
-                    </table>
+                    <button class="ocr-btn primary" onclick="saveImageOrderToXlsx()">写入 data.xlsx</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
-<input type="file" id="image-order-file" accept="image/*" multiple style="display:none">
 <datalist id="ocr-model-options"></datalist>
 
 <div id="drop-zone" title="拖拽或点击导入Excel数据">📁</div>
@@ -896,7 +859,7 @@
     const DATA_XLSX_API_URL = '/api/data-xlsx';
     const RECENT_DONE_DAYS = 3;
     const DAY_MS = 86400000;
-    const ORDER_EXPORT_HEADERS = ['名字', '昵称', '平台', '手机号码', '地区', '机器', '编号', '起租日', '结束日', '租金', '订单号'];
+    const ORDER_EXPORT_HEADERS = ['名字', '昵称', '平台', '手机号码', '地区', '机器', '编号', '起租日', '结束日', '租金'];
     const DEPOSIT_MODEL_MAP = {
         1000: 'IXUS130',
         1111: 'GR3'
@@ -1138,7 +1101,7 @@
 
     function createEmptyImageOrderFields() {
         return {
-            orderNo: '',
+            platform: '闲鱼',
             name: '',
             nickname: '',
             depositAmount: null,
@@ -1156,7 +1119,7 @@
     function readOcrFormFields() {
         const depositText = getOcrField('ocr-deposit');
         return {
-            orderNo: getOcrField('ocr-order-no'),
+            platform: getOcrField('ocr-platform') || '闲鱼',
             name: getOcrField('ocr-name'),
             nickname: getOcrField('ocr-nickname'),
             depositAmount: depositText ? Number(depositText) : null,
@@ -1172,8 +1135,7 @@
     }
 
     function writeOcrFormFields(fields = {}) {
-        setOcrField('ocr-order-no', fields.orderNo || '');
-        setOcrField('ocr-platform', '闲鱼');
+        setOcrField('ocr-platform', fields.platform || '闲鱼');
         setOcrField('ocr-deposit', fields.depositAmount !== null && fields.depositAmount !== undefined ? Number(fields.depositAmount).toFixed(2) : '');
         setOcrField('ocr-name', fields.name || '');
         setOcrField('ocr-phone', fields.phone || '');
@@ -1197,9 +1159,14 @@
 
     function openImageOrderModal() {
         renderOcrModelOptions();
+        activeImageOrderIndex = -1;
+        imageOrderFile = null;
+        imageOrderFiles = [];
+        imageOrderBatch.forEach(entry => entry.previewUrl && URL.revokeObjectURL(entry.previewUrl));
+        imageOrderBatch = [];
+        writeOcrFormFields(createEmptyImageOrderFields());
         setOcrStatus('');
         setOcrSaveState('待写入');
-        renderImageOrderBatch();
         document.getElementById('image-order-modal')?.classList.add('active');
     }
 
@@ -1237,7 +1204,53 @@
         return '';
     }
 
-    function sanitizeOcrName(value) {
+    function sanitizeOcrNickname(value) {
+        const cleaned = String(value || '')
+            .replace(/^[：:\s]+/, '')
+            .replace(/^(免押备注|免押备|押备注|备注)+[：:\s]*/g, '')
+            .split(/免押开始时间|免押结束时间|租赁开始时间|租赁结束时间|租客信息|订单号|授权时间|扣款金额|总租金|免押金额/)[0]
+            .replace(/[^\w\u3400-\u9fff·.()（）【】《》\-]/g, '')
+            .trim();
+        if (!cleaned) return '';
+        return cleaned.slice(0, 32);
+    }
+
+    function extractOcrNickname(lines) {
+        for (let i = 0; i < lines.length; i++) {
+            const compact = lines[i].replace(/\s/g, '');
+            if (!/免押备?注|押备注|备注/.test(compact)) continue;
+
+            const sameLine = sanitizeOcrNickname(lines[i].replace(/^.*?(免押备?注|押备注|备注)[:：]?/i, ''));
+            if (sameLine) return sameLine;
+
+            for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+                if (/时间|金额|信息|姓名|电话|账号|所在地/.test(lines[j])) break;
+                const nextLine = sanitizeOcrNickname(lines[j]);
+                if (nextLine) return nextLine;
+            }
+        }
+        return sanitizeOcrNickname(takeValueAfterLabel(lines, '免押备注'));
+    }
+
+    function trimOcrNameLabelTail(candidate, source = '') {
+        const text = String(source || '').replace(/\s/g, '');
+        const name = String(candidate || '');
+        if (!name) return '';
+
+        const compoundSurname = /^(欧阳|太史|端木|上官|司马|东方|独孤|南宫|万俟|闻人|夏侯|诸葛|尉迟|公羊|赫连|澹台|皇甫|宗政|濮阳|公冶|太叔|申屠|公孙|慕容|仲孙|钟离|长孙|宇文|司徒|鲜于|司空|闾丘|子车|亓官|司寇|巫马|公西|颛孙|壤驷|公良|漆雕|乐正|宰父|谷梁|拓跋|夹谷|轩辕|令狐|段干|百里|呼延|东郭|南门|羊舌|微生|梁丘|左丘|东门|西门)/;
+        if (compoundSurname.test(name)) return name;
+
+        // 闲鱼订单截图里“姓名”标签经常被 OCR 残留到姓名末尾，例如“成淇金名”。
+        // 只在姓名字段上下文里裁剪，避免误伤普通手动输入的四字姓名。
+        if (/姓名/.test(text) && name.length === 4 && /[姓名性别]$/.test(name)) {
+            return name.slice(0, 3);
+        }
+        return name;
+    }
+
+    function sanitizeOcrName(value, options = {}) {
+        const source = options.source || value;
+        const fromNameLabel = Boolean(options.fromNameLabel);
         const cleaned = String(value || '')
             .replace(/\s+/g, '')
             .replace(/^.*?姓名[:：]?/, '')
@@ -1248,21 +1261,46 @@
         if (!cleaned) return '';
         if (cleaned.includes('·')) return cleaned.slice(0, 12);
         const plausible = cleaned.match(/[\u3400-\u9fff]{2,4}/);
-        return plausible ? plausible[0] : cleaned.slice(0, 4);
+        const candidate = plausible ? plausible[0] : cleaned.slice(0, 4);
+        return fromNameLabel ? trimOcrNameLabelTail(candidate, source) : candidate;
+    }
+
+    function getTenantInfoLines(lines) {
+        const start = lines.findIndex(line => /租客信息|租客信|客户信息|用户信息/.test(line.replace(/\s/g, '')));
+        if (start < 0) return lines;
+        const end = lines.findIndex((line, index) => index > start && /共租风险|风险信息|风险模型|当日用户|7日用户|30日用户/.test(line.replace(/\s/g, '')));
+        return lines.slice(start, end > start ? end : Math.min(start + 12, lines.length));
+    }
+
+    function extractNameFromLine(line) {
+        const compact = String(line || '').replace(/\s/g, '');
+        if (!/姓名/.test(compact)) return '';
+        const raw = compact
+            .replace(/^.*?姓名[:：]?/, '')
+            .split(/性别|身份证号|身份证|支付宝登录账号|支付宝|联系电话|下单所在地|深度风控查询|深度|风控|查询|未验证人脸|已验证人脸/)[0];
+        return sanitizeOcrName(raw, { source: line, fromNameLabel: true });
     }
 
     function extractOcrCustomerName(normalized, lines) {
-        const inlineName = sanitizeOcrName(takeValueAfterLabel(lines, '姓名'));
+        const tenantLines = getTenantInfoLines(lines);
+
+        for (const line of tenantLines) {
+            const lineName = extractNameFromLine(line);
+            if (lineName) return lineName;
+        }
+
+        const inlineRaw = takeValueAfterLabel(tenantLines, '姓名') || takeValueAfterLabel(lines, '姓名');
+        const inlineName = sanitizeOcrName(inlineRaw, { source: inlineRaw, fromNameLabel: true });
         if (inlineName) return inlineName;
 
         const blockMatch = normalized.match(/姓\s*名\s*[:：]?\s*([^\n]+)/);
-        const blockName = sanitizeOcrName(blockMatch?.[1] || '');
+        const blockName = sanitizeOcrName(blockMatch?.[1] || '', { source: blockMatch?.[0] || '', fromNameLabel: true });
         if (blockName) return blockName;
 
-        const nameLabelIndex = lines.findIndex(line => /姓\s*名/.test(line));
+        const nameLabelIndex = tenantLines.findIndex(line => /姓\s*名/.test(line));
         if (nameLabelIndex >= 0) {
-            for (let i = nameLabelIndex + 1; i <= Math.min(nameLabelIndex + 3, lines.length - 1); i++) {
-                const candidate = sanitizeOcrName(lines[i]);
+            for (let i = nameLabelIndex + 1; i <= Math.min(nameLabelIndex + 3, tenantLines.length - 1); i++) {
+                const candidate = sanitizeOcrName(tenantLines[i], { source: tenantLines[i], fromNameLabel: true });
                 if (candidate) return candidate;
             }
         }
@@ -1313,7 +1351,7 @@
         const lines = normalized.split('\n').map(line => line.trim()).filter(Boolean);
         const orderNo = (normalized.match(/订单号\s*(\d{12,})/) || [])[1] || '';
         const name = extractOcrCustomerName(normalized, lines);
-        const nickname = takeValueAfterLabel(lines, '免押备注');
+        const nickname = extractOcrNickname(lines);
         const depositAmount = findMoneyNearLabel(lines, /免押金额|押金金额|押金/);
         const phoneLine = takeValueAfterLabel(lines, '联系电话');
         const phoneMatch = (phoneLine.match(/1\d[\d\s-]{8,}\d/) || normalized.match(/1\d[\d\s-]{8,}\d/g) || [])[0] || '';
@@ -1338,7 +1376,7 @@
     }
 
     function fillImageOrderFields(fields) {
-        if (fields.orderNo) setOcrField('ocr-order-no', fields.orderNo);
+        if (fields.platform) setOcrField('ocr-platform', fields.platform);
         if (fields.name) setOcrField('ocr-name', fields.name);
         if (fields.nickname) setOcrField('ocr-nickname', fields.nickname);
         if (fields.depositAmount !== null && fields.depositAmount !== undefined) {
@@ -1348,7 +1386,6 @@
         if (fields.phone) setOcrField('ocr-phone', fields.phone);
         if (fields.startDate) setOcrField('ocr-start-date', fields.startDate);
         if (fields.endDate) setOcrField('ocr-end-date', fields.endDate);
-        setOcrField('ocr-platform', '闲鱼');
     }
 
     function syncActiveImageOrderFromForm() {
@@ -1374,7 +1411,7 @@
         const tbody = document.getElementById('ocr-batch-body');
         if (!tbody) return;
         if (!imageOrderBatch.length) {
-            tbody.innerHTML = '<tr><td colspan="11" class="empty-row">还没有选择图片</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="empty-row">手动录单模式已启用</td></tr>';
             return;
         }
 
@@ -1485,15 +1522,7 @@
     }
 
     async function recognizeImageOrderFile(file, onProgress) {
-        if (!window.Tesseract) throw new Error('OCR 组件未加载，可手动粘贴文本后提取');
-        const result = await Tesseract.recognize(file, 'chi_sim+eng', {
-            logger: info => {
-                if (info.status === 'recognizing text') {
-                    onProgress?.(Math.round((info.progress || 0) * 100));
-                }
-            }
-        });
-        return normalizeOcrText(result?.data?.text || '');
+        throw new Error('图片识别已取消，请手动填写订单');
     }
 
     function applyOcrResultToEntry(entry, text) {
@@ -1510,95 +1539,15 @@
     }
 
     async function runImageOrderOcr() {
-        if (activeImageOrderIndex >= 0) syncActiveImageOrderFromForm();
-        const entry = activeImageOrderIndex >= 0 ? imageOrderBatch[activeImageOrderIndex] : null;
-        const file = entry?.file || imageOrderFile;
-        if (!file) {
-            setOcrStatus('请先选择图片');
-            return;
-        }
-
-        try {
-            if (entry) {
-                entry.status = '识别中';
-                renderImageOrderBatch();
-            }
-            setOcrStatus('OCR 识别中...');
-            const text = await recognizeImageOrderFile(file, progress => setOcrStatus(`OCR 识别中 ${progress}%`));
-            let extracted;
-            if (entry) {
-                extracted = applyOcrResultToEntry(entry, text);
-                autoAssignImageOrderQueueDeviceIds();
-                writeOcrFormFields(entry.fields);
-            } else {
-                extracted = { ...readOcrFormFields(), ...compactExtractedFields(extractImageOrderFields(text)), rawText: text };
-                assignDeviceIdToFields(extracted);
-                writeOcrFormFields(extracted);
-            }
-            setOcrSaveState(entry?.status || '待写入');
-            setOcrStatus(getDepositInferenceMessage(extracted, extracted.deviceId ? `识别完成，自动分配 #${extracted.deviceId}` : '识别完成'));
-            renderImageOrderBatch();
-        } catch (err) {
-            console.error(err);
-            if (entry) {
-                entry.status = '识别失败';
-                renderImageOrderBatch();
-            }
-            setOcrStatus('识别失败，可手动粘贴文本后提取');
-        }
+        setOcrStatus('图片识别已取消，请手动填写订单');
     }
 
     async function runBatchImageOrderOcr() {
-        if (!imageOrderBatch.length) {
-            setOcrStatus('请先选择图片');
-            return;
-        }
-        if (!window.Tesseract) {
-            setOcrStatus('OCR 组件未加载，可手动粘贴文本后提取');
-            return;
-        }
-
-        syncActiveImageOrderFromForm();
-        for (let i = 0; i < imageOrderBatch.length; i++) {
-            const entry = imageOrderBatch[i];
-            try {
-                imageOrderFile = entry.file;
-                entry.status = '识别中';
-                loadImageOrderBatchItem(i);
-                renderImageOrderBatch();
-                const text = await recognizeImageOrderFile(entry.file, progress => {
-                    setOcrStatus(`第 ${i + 1}/${imageOrderBatch.length} 张识别中 ${progress}%`);
-                });
-                const extracted = applyOcrResultToEntry(entry, text);
-                autoAssignImageOrderQueueDeviceIds();
-                writeOcrFormFields(entry.fields);
-                setOcrSaveState(entry.status);
-                setOcrStatus(getDepositInferenceMessage(entry.fields, entry.fields.deviceId ? `第 ${i + 1}/${imageOrderBatch.length} 张识别完成，自动分配 #${entry.fields.deviceId}` : `第 ${i + 1}/${imageOrderBatch.length} 张识别完成`));
-            } catch (err) {
-                console.error(err);
-                entry.status = '识别失败';
-                setOcrStatus(`第 ${i + 1}/${imageOrderBatch.length} 张识别失败`);
-            }
-            renderImageOrderBatch();
-        }
-        const completeCount = imageOrderBatch.filter(entry => !getImageOrderMissingFields(entry.fields).length).length;
-        setOcrStatus(`批量识别完成：${completeCount}/${imageOrderBatch.length} 单可写入`);
+        setOcrStatus('图片识别已取消，请逐单手动填写订单');
     }
 
     function handleImageOrderFiles(fileList) {
-        const files = Array.from(fileList || []).filter(file => file && file.type.startsWith('image/'));
-        if (!files.length) return;
-        clearImageOrderBatch();
-        imageOrderFiles = files;
-        imageOrderBatch = files.map(file => ({
-            file,
-            fileName: file.name,
-            status: '待识别',
-            fields: createEmptyImageOrderFields()
-        }));
-        loadImageOrderBatchItem(0);
-        setOcrStatus(`已选择 ${files.length} 张图片`);
-        renderImageOrderBatch();
+        setOcrStatus('图片识别已取消，请手动填写订单');
     }
 
     function getSheetHeaders(sheet) {
@@ -1640,7 +1589,7 @@
         const row = {
             '名字': fields.name || '',
             '昵称': fields.nickname || '',
-            '平台': '闲鱼',
+            '平台': fields.platform || '闲鱼',
             '手机号码': fields.phone || '',
             '地区': fields.area || '',
             '机器': fields.model || '',
@@ -1649,8 +1598,6 @@
             '结束日': normalizeOcrDate(fields.endDate) || fields.endDate || '',
             '租金': fields.rent ? Number(fields.rent) : ''
         };
-        const orderNo = fields.orderNo || '';
-        if (orderNo) row['订单号'] = orderNo;
         return row;
     }
 
@@ -1925,28 +1872,16 @@
 
     async function saveImageOrderToXlsx() {
         try {
-            syncActiveImageOrderFromForm();
-            let fields = activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]
-                ? imageOrderBatch[activeImageOrderIndex].fields
-                : readOcrFormFields();
-            if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
-                autoAssignImageOrderQueueDeviceIds();
-                fields = imageOrderBatch[activeImageOrderIndex].fields;
-            } else {
-                assignDeviceIdToFields(fields);
-                writeOcrFormFields(fields);
-            }
+            const fields = readOcrFormFields();
+            assignDeviceIdToFields(fields);
+            writeOcrFormFields(fields);
             const newRow = buildImageOrderRow(fields);
             setOcrSaveState('写入中');
             setOcrStatus('正在写入 data.xlsx...');
             await appendImageOrderRowsToXlsx([newRow]);
-            if (activeImageOrderIndex >= 0 && imageOrderBatch[activeImageOrderIndex]) {
-                imageOrderBatch[activeImageOrderIndex].status = '已写入';
-                renderImageOrderBatch();
-            }
             setOcrSaveState('已写入');
             setOcrStatus(`已追加 ${newRow['名字']} 的订单`);
-            showToast('图片订单已写入 data.xlsx');
+            showToast('手动订单已写入 data.xlsx');
         } catch (err) {
             console.error(err);
             setOcrSaveState('写入失败');
@@ -1957,7 +1892,7 @@
 
     async function saveBatchImageOrdersToXlsx() {
         try {
-            if (!imageOrderBatch.length) throw new Error('还没有批量识别队列');
+            if (!imageOrderBatch.length) throw new Error('批量录单已取消，请逐单手动写入');
             syncActiveImageOrderFromForm();
             autoAssignImageOrderQueueDeviceIds();
             const incomplete = [];
@@ -2033,6 +1968,10 @@
 
     function formatDateStr(d) {
         return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function formatCompactDateStr(d) {
+        return `${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
     }
 
     function normalizeKey(model, id) {
@@ -2133,8 +2072,8 @@
         inventoryData.map(normalizeInventoryItem).forEach(item => {
             const key = normalizeKey(item.model, item.id);
             if (!key || seen.has(key)) return;
-            if (!includeUnavailable && item.status !== 'normal') return;
             seen.add(key);
+            if (!includeUnavailable && item.status !== 'normal') return;
             allInv.push(item);
         });
 
@@ -2312,15 +2251,16 @@
         }
 
         const newKey = normalizeKey(model, id);
-        const duplicate = inventoryData.find(item => normalizeKey(item.model, item.id) === newKey && normalizeKey(item.model, item.id) !== editKey);
-        if (duplicate) {
+        const duplicate = inventoryData.find(item => normalizeKey(item.model, item.id) === newKey);
+        if (duplicate && editKey && normalizeKey(duplicate.model, duplicate.id) !== editKey) {
             alert('这台设备已经存在，请检查机型和编号');
             return;
         }
 
         const item = { model, id, status, note };
-        if (editKey) {
-            inventoryData = inventoryData.map(x => normalizeKey(x.model, x.id) === editKey ? item : x);
+        if (editKey || duplicate) {
+            const targetKey = editKey || newKey;
+            inventoryData = inventoryData.map(x => normalizeKey(x.model, x.id) === targetKey ? item : x);
         } else {
             inventoryData.push(item);
         }
@@ -2329,7 +2269,7 @@
         resetInventoryForm();
         renderInventoryManager();
         scheduleDashboardUpdate();
-        showToast('库存已保存');
+        showToast(duplicate || editKey ? '库存已更新' : '库存已保存');
     }
 
     function editInventoryItem(key) {
@@ -2665,6 +2605,11 @@
         const occupiedDayMap = {};
         const deviceModelMap = {};
         const modelInventoryCountMap = {};
+        const inventoryStatusMap = new Map();
+        inventoryData.map(normalizeInventoryItem).forEach(item => {
+            const key = normalizeKey(item.model, item.id);
+            if (key) inventoryStatusMap.set(key, item);
+        });
         allInventory.forEach(v => {
             const key = normalizeKey(v.model, v.id);
             if (!key) return;
@@ -2686,16 +2631,21 @@
             const deviceKey = normalizeKey(r['机器'], r['编号']);
             const deviceName = r['机器'] && r['编号'] ? `${String(r['机器']).trim().toUpperCase()} #${String(r['编号']).trim()}` : '未知设备';
             const platformName = String(r['平台'] || '私单').trim() || '私单';
+            const inventoryRecord = deviceKey ? inventoryStatusMap.get(deviceKey) : null;
+            const inventoryBlocked = Boolean(inventoryRecord && inventoryRecord.status !== 'normal');
             const safeMachine = escapeHtml(r['机器'] || '未知机型');
             const safeMachineUpper = escapeHtml(String(r['机器'] || '未知机型').trim().toUpperCase());
             const safeId = escapeHtml(r['编号'] || '-');
             const safeStart = escapeHtml(r['起租日'] || '-');
             const safeEnd = escapeHtml(r['结束日'] || '-');
+            const safeCompactPeriod = escapeHtml(`${formatCompactDateStr(start)} ~ ${formatCompactDateStr(endDay)}`);
             const safePlatform = escapeHtml(platformName);
             const safeCustomer = escapeHtml(r['名字'] || '无姓名');
             const safeNicknamePlain = escapeHtml(r['昵称'] || '');
             const safeArea = escapeHtml(r['地区'] || '未知地区');
             const safeNickname = r['昵称'] ? ` · ${escapeHtml(r['昵称'])}` : '';
+            const inventoryStatusLabel = inventoryBlocked ? escapeHtml(getStatusLabel(inventoryRecord.status)) : '';
+            const inventoryNoteText = inventoryBlocked && inventoryRecord.note ? ` · ${escapeHtml(inventoryRecord.note)}` : '';
             if (deviceKey && !inventoryDisplayMap[deviceKey]) {
                 inventoryDisplayMap[deviceKey] = deviceName;
                 deviceModelMap[deviceKey] = modelName;
@@ -2821,22 +2771,31 @@
                 let statusTag = isPrepping 
                     ? '<span style="display:inline-block; color:#ff3b30; font-size:10px; border:1px solid rgba(255,59,48,0.3); background:rgba(255,59,48,0.05); padding:2px 6px; border-radius:4px; margin-right:8px; font-weight:800;">备货中</span>' 
                     : '';
+                let inventoryWarningTag = inventoryBlocked ? `<span class="inventory-warning-mark">设备${inventoryStatusLabel}</span>` : '';
                 const conflictList = conflictMap.get(idx) || [];
                 let conflictTag = conflictList.length ? '<span class="conflict-mark">档期冲突</span>' : '';
-                let rowClass = conflictList.length ? ' class="conflict-row"' : '';
+                const rowClasses = [
+                    conflictList.length ? 'conflict-row' : '',
+                    inventoryBlocked ? 'inventory-warning-row' : ''
+                ].filter(Boolean).join(' ');
+                let rowClass = rowClasses ? ` class="${rowClasses}"` : '';
                 let conflictDetail = conflictList.length
                     ? `<div class="conflict-detail">冲突订单：${conflictList.slice(0, 2).map(item => `<span>${escapeHtml(item)}</span>`).join('')}${conflictList.length > 2 ? `<span>等 ${conflictList.length} 单</span>` : ''}</div>`
+                    : '';
+                let inventoryWarningDetail = inventoryBlocked
+                    ? `<div class="inventory-warning-detail">库存状态：${inventoryStatusLabel}${inventoryNoteText}，该订单可能无法正常履约</div>`
                     : '';
 
                 mainRows += `<tr${rowClass}>
                     <td>
-                        <div class="schedule-customer">${statusTag}<span>${safeCustomer || '-'}</span>${conflictTag}</div>
-                        <div class="schedule-meta"><span>${safePlatform}</span>${safeNicknamePlain ? `<span>${safeNicknamePlain}</span>` : ''}</div>
+                        <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}</div>
+                        <div class="schedule-meta"><span>${safePlatform}</span>${safeNicknamePlain ? `<span class="schedule-note">${safeNicknamePlain}</span>` : ''}</div>
+                        ${inventoryWarningDetail}
                         ${conflictDetail}
                     </td>
-                    <td style="color:var(--blue); font-weight:700;">${safeMachineUpper}</td>
-                    <td style="font-weight:600;">#${safeId}</td>
-                    <td style="color:var(--text-secondary);font-size:11px">${safeStart} ~ ${safeEnd}</td>
+                    <td><span class="schedule-device">${safeMachineUpper}</span></td>
+                    <td><span class="schedule-id">#${safeId}</span></td>
+                    <td><span class="schedule-period" title="${safeStart} ~ ${safeEnd}">${safeCompactPeriod}</span></td>
                 </tr>`;
             }
         });
@@ -3061,10 +3020,6 @@
     });
     document.getElementById('excel-file-input').addEventListener('change', (e) => {
         importOrderFile(e.target.files && e.target.files[0]);
-        e.target.value = '';
-    });
-    document.getElementById('image-order-file').addEventListener('change', (e) => {
-        handleImageOrderFiles(e.target.files);
         e.target.value = '';
     });
     ['ocr-model', 'ocr-start-date', 'ocr-end-date'].forEach(id => {
