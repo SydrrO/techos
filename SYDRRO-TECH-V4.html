@@ -822,6 +822,7 @@
     const DEFAULT_SHIP_TRANSIT_DAYS = 2;
     const SHIPPING_TRANSIT_RULES = [
         { days: 0, pattern: /自提|同城|本地|无需发货|不用发货/ },
+        { days: 1, pattern: /江苏|南京|苏州|无锡|常州|镇江|扬州|泰州|南通|徐州|淮安|盐城|连云港|宿迁|浙江|杭州|宁波|温州|嘉兴|湖州|绍兴|金华|台州|舟山|衢州|丽水|上海|安徽|合肥|芜湖|马鞍山|滁州|宣城|铜陵|池州|安庆|蚌埠|淮南|淮北|宿州|阜阳|亳州|六安|黄山/ },
         { days: 3, pattern: /新疆|西藏|青海|甘肃|宁夏|内蒙古|黑龙江|吉林|海南|香港|澳门|台湾/ },
         { days: 2, pattern: /云南|贵州|四川|重庆|广西|广东|福建|江西|湖南|湖北|河南|河北|山东|山西|陕西|辽宁/ }
     ];
@@ -2411,7 +2412,7 @@
 
     function getShippingPlan(row, start) {
         const transitDays = getShippingTransitDays(row?.['地区']);
-        const arrivalBufferDays = transitDays > 0 ? SHIP_ARRIVAL_BUFFER_DAYS : 0;
+        const arrivalBufferDays = SHIP_ARRIVAL_BUFFER_DAYS;
         const arrivalDate = new Date(start.getTime() - arrivalBufferDays * DAY_MS);
         arrivalDate.setHours(0, 0, 0, 0);
         const shipDate = new Date(arrivalDate.getTime() - transitDays * DAY_MS);
@@ -2426,7 +2427,8 @@
     }
 
     function getShippingPlanText(plan, start) {
-        if (!plan || plan.transitDays <= 0) return `${formatDateStr(start)} 可交付`;
+        if (!plan) return `${formatDateStr(start)} 前到`;
+        if (plan.transitDays <= 0) return `${formatDateStr(plan.arrivalDate)} 可交付`;
         return `${formatDateStr(plan.shipDate)} 发 · ${formatDateStr(plan.arrivalDate)} 前到`;
     }
 
