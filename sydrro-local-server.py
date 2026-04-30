@@ -2,16 +2,19 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from socketserver import TCPServer, ThreadingMixIn
 import base64
+from http.cookies import SimpleCookie
 from datetime import datetime, timezone
 import ipaddress
 import io
 import json
 import os
+import secrets
 import socket
 import sqlite3
 import sys
 import tempfile
 import threading
+import time
 from urllib.error import URLError
 from urllib.request import urlopen
 import webbrowser
@@ -32,8 +35,12 @@ ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
 DATA_XLSX_PATH = ROOT / "data.xlsx"
 DB_PATH = ROOT / "sydrro-data.sqlite3"
+AUTH_CONFIG_PATH = ROOT / "auth-config.json"
 APP_HTML_FILE = "SYDRRO-TECH.html"
 STATE_RECORD_ID = "default"
+SESSION_COOKIE_NAME = "sydrro_session"
+SESSION_TTL_SECONDS = 12 * 60 * 60
+AUTH_SESSIONS = {}
 
 
 def is_port_in_use(port, host="localhost"):
@@ -106,6 +113,86 @@ def open_browser_url(url):
 
 def utc_now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def normalize_permissions(value):
+    if not isinstance(value, dict):
+        return {"finance": True}
+    return {"finance": value.get("finance") is not False}
+
+
+def load_auth_users():
+    if not AUTH_CONFIG_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(AUTH_CONFIG_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+    users = {}
+    for item in payload.get("users", []):
+        if not isinstance(item, dict):
+            continue
+        username = str(item.get("username") or "").strip()
+        password = str(item.get("password") or "")
+        role = "admin" if item.get("role") == "admin" else "viewer"
+        if not username or not password:
+            continue
+        users[username] = {
+            "username": username,
+            "password": password,
+            "role": role,
+            "label": str(item.get("label") or ""),
+            "permissions": normalize_permissions(item.get("permissions")),
+        }
+    return users
+
+
+def prune_expired_sessions():
+    now = time.time()
+    expired = [token for token, session in AUTH_SESSIONS.items() if session.get("expires_at", 0) <= now]
+    for token in expired:
+        AUTH_SESSIONS.pop(token, None)
+
+
+def create_auth_session(user):
+    prune_expired_sessions()
+    token = secrets.token_urlsafe(32)
+    AUTH_SESSIONS[token] = {
+        "role": user["role"],
+        "username": user["username"],
+        "label": user.get("label") or "",
+        "permissions": normalize_permissions(user.get("permissions")),
+        "expires_at": time.time() + SESSION_TTL_SECONDS,
+    }
+    return token
+
+
+def read_cookie_value(cookie_header, name):
+    if not cookie_header:
+        return ""
+    cookie = SimpleCookie()
+    try:
+        cookie.load(cookie_header)
+    except Exception:
+        return ""
+    morsel = cookie.get(name)
+    return morsel.value if morsel else ""
+
+
+def get_auth_session(token):
+    prune_expired_sessions()
+    if not token:
+        return None
+    return AUTH_SESSIONS.get(token)
+
+
+def build_session_cookie(token):
+    return f"{SESSION_COOKIE_NAME}={token}; Path=/; Max-Age={SESSION_TTL_SECONDS}; SameSite=Lax; HttpOnly"
+
+
+def build_clear_session_cookie():
+    return f"{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly"
 
 
 def default_state():
@@ -223,6 +310,9 @@ class SydrroHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if self.path.split("?", 1)[0] == "/api/session":
+            self.send_session()
+            return
         if self.path.split("?", 1)[0] == "/api/state":
             self.send_state()
             return
@@ -232,24 +322,112 @@ class SydrroHandler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        if self.path.split("?", 1)[0] == "/api/login":
+            self.receive_login()
+            return
+        if self.path.split("?", 1)[0] == "/api/logout":
+            self.receive_logout()
+            return
         if self.path.split("?", 1)[0] == "/api/state":
+            if not self.require_admin():
+                return
             self.receive_state()
             return
         if self.path.split("?", 1)[0] == "/api/backup":
+            if not self.require_admin():
+                return
             self.receive_state()
             return
         if self.path.split("?", 1)[0] == "/api/data-xlsx":
+            if not self.require_admin():
+                return
             self.receive_data_xlsx()
             return
         self.send_error(404, "Not Found")
 
-    def send_json(self, data, status=200):
+    def send_json(self, data, status=200, headers=None):
         payload = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        for key, value in (headers or {}).items():
+            self.send_header(key, value)
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
         self.wfile.write(payload)
+
+    def get_auth_token(self):
+        return read_cookie_value(self.headers.get("Cookie"), SESSION_COOKIE_NAME)
+
+    def get_auth_session(self):
+        return get_auth_session(self.get_auth_token())
+
+    def is_admin(self):
+        session = self.get_auth_session()
+        return bool(session and session.get("role") == "admin")
+
+    def require_admin(self):
+        if self.is_admin():
+            return True
+        self.send_json({"ok": False, "error": "admin_required", "message": "当前为只读访问，管理员登录后才能写入数据"}, status=403)
+        return False
+
+    def send_session(self):
+        session = self.get_auth_session()
+        if session:
+            self.send_json({
+                "ok": True,
+                "authenticated": True,
+                "role": session.get("role", "viewer"),
+                "username": session.get("username", "viewer"),
+                "label": session.get("label") or "",
+                "permissions": normalize_permissions(session.get("permissions")),
+            })
+            return
+        self.send_json({"ok": True, "authenticated": False, "role": "viewer", "username": "viewer", "label": "", "permissions": {"finance": True}})
+
+    def receive_login(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0 or length > 4096:
+            self.send_json({"ok": False, "error": "invalid_login", "message": "登录信息不完整"}, status=400)
+            return
+
+        try:
+            data = json.loads(self.rfile.read(length).decode("utf-8"))
+        except Exception:
+            self.send_json({"ok": False, "error": "invalid_json", "message": "登录信息格式错误"}, status=400)
+            return
+
+        username = str(data.get("username") or "").strip()
+        password = str(data.get("password") or "")
+        user = load_auth_users().get(username)
+        if user and secrets.compare_digest(username, user["username"]) and secrets.compare_digest(password, user["password"]):
+            token = create_auth_session(user)
+            self.send_json(
+                {
+                    "ok": True,
+                    "authenticated": True,
+                    "role": user["role"],
+                    "username": user["username"],
+                    "label": user.get("label") or "",
+                    "permissions": user.get("permissions") or {"finance": True},
+                },
+                headers={"Set-Cookie": build_session_cookie(token)},
+            )
+            return
+
+        self.send_json(
+            {"ok": False, "error": "invalid_credentials", "message": "账号或密码不正确"},
+            status=401,
+        )
+
+    def receive_logout(self):
+        token = self.get_auth_token()
+        if token:
+            AUTH_SESSIONS.pop(token, None)
+        self.send_json(
+            {"ok": True, "authenticated": False, "role": "viewer", "username": "viewer", "label": "", "permissions": {"finance": True}},
+            headers={"Set-Cookie": build_clear_session_cookie()},
+        )
 
     def send_state(self):
         try:

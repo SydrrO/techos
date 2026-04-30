@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-auth-role="viewer" data-auth-user="viewer" data-finance-access="allowed">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.61">
-    <title>SYDRRO-TECH V6.61 | 智能资产终端</title>
+    <meta name="app-version" content="V6.73">
+    <title>SYDRRO-TECH V6.73 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -59,8 +59,16 @@
             box-shadow: 0 6px 22px rgba(15,23,42,0.04);
         }
 
+        .brand { min-width: 0; }
+        .brand-title-row { display:flex; align-items:center; gap:10px; min-width:0; }
         .brand h1 { font-size: 21px; font-weight: 900; margin: 0; background: var(--blue-grad); background-clip: text; -webkit-background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
         .brand p { color: var(--text-secondary); margin: 0; font-size: 10px; font-weight: 700; letter-spacing: 0; }
+        .school-badge {
+            display:none; height:24px; align-items:center; padding:0 10px; border-radius:999px;
+            background:rgba(0,122,255,0.08); border:1px solid rgba(0,122,255,0.14);
+            color:#0068d9; font-size:11px; font-weight:900; white-space:nowrap;
+        }
+        .school-badge.active { display:inline-flex; }
 
         .nav-toggle { background: rgba(226,232,240,0.72); padding: 4px; border-radius: 14px; display: flex; align-items: center; gap: 4px; box-shadow: inset 0 1px 2px rgba(15,23,42,0.06); border: 1px solid rgba(255,255,255,0.78); }
         .nav-btn {
@@ -75,6 +83,38 @@
         .nav-btn.active { background: white; color: var(--blue); box-shadow: 0 5px 16px rgba(15,23,42,0.10); }
         .nav-count { min-width: 18px; height: 18px; margin-left: 6px; padding: 0 5px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; background: rgba(255,59,48,0.12); color: #d92d20; font-size: 10px; font-weight: 900; vertical-align: middle; }
         .nav-count:empty { display: none; }
+        .header-actions { display:flex; align-items:center; gap:10px; min-width:0; }
+        .auth-controls { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+        .auth-badge {
+            height:34px; display:inline-flex; align-items:center; gap:7px; padding:0 12px; border-radius:999px;
+            background:rgba(248,250,252,0.92); border:1px solid #e8eef6; color:#667085; font-size:11px; font-weight:900;
+            white-space:nowrap;
+        }
+        html[data-auth-role="admin"] .auth-badge { background:rgba(52,199,89,0.12); border-color:rgba(52,199,89,0.22); color:#1f9d47; }
+        .auth-btn {
+            height:34px; border:none; border-radius:999px; padding:0 12px; cursor:pointer; font-size:11px; font-weight:900;
+            background:#eef2f7; color:#475467; transition:.2s; white-space:nowrap;
+        }
+        .auth-btn:hover { transform:translateY(-1px); box-shadow:0 8px 18px rgba(15,23,42,0.07); }
+        .auth-btn.primary { background:var(--blue-grad); color:white; box-shadow:0 8px 18px rgba(0,122,255,.16); }
+        html[data-auth-role="viewer"] .admin-only { display:none !important; }
+        html[data-auth-role="admin"] .viewer-only { display:none !important; }
+        html[data-auth-user="viewer"] .session-only { display:none !important; }
+        html[data-auth-role="viewer"] .ship-btn { display:none !important; }
+        html[data-finance-access="denied"] #finance > :not(#finance-denied) { display:none !important; }
+        .readonly-note {
+            display:none; margin-bottom:14px; padding:11px 13px; border-radius:14px;
+            background:rgba(0,122,255,0.06); border:1px solid rgba(0,122,255,0.12);
+            color:#52708f; font-size:12px; font-weight:800; line-height:1.5;
+        }
+        html[data-auth-role="viewer"] .readonly-note { display:block; }
+        html[data-auth-role="viewer"] #drop-zone { display:none !important; }
+        .finance-denied {
+            display:none; min-height:360px; align-items:center; justify-content:center; text-align:center;
+            border-radius:24px; background:rgba(255,255,255,0.82); border:1px solid rgba(226,232,240,0.9);
+            box-shadow:var(--shadow); color:#344054; font-size:18px; font-weight:950;
+        }
+        html[data-finance-access="denied"] #finance-denied { display:flex; }
 
         .status-bar {
             background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82)); margin: 24px auto; border-radius: 22px; padding: 18px 24px;
@@ -632,6 +672,35 @@
             backdrop-filter: blur(10px);
         }
         .modal-backdrop.active { display: flex; animation: backdropFade .18s ease-out; }
+        .auth-modal {
+            position:fixed; inset:0; z-index:1500; display:none; align-items:center; justify-content:center; padding:24px;
+            background:rgba(15,23,42,0.34); backdrop-filter:blur(16px);
+        }
+        .auth-modal.active { display:flex; animation:backdropFade .18s ease-out; }
+        .auth-panel {
+            width:min(430px, 100%); border-radius:24px; padding:26px;
+            background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+            border:1px solid rgba(255,255,255,0.88); box-shadow:0 30px 90px rgba(15,23,42,0.26);
+            animation:panelRise .24s ease-out; position:relative; overflow:hidden;
+        }
+        .auth-panel::before {
+            content:""; position:absolute; inset:0 0 auto 0; height:4px;
+            background:linear-gradient(90deg, #007aff, #19c39a);
+        }
+        .auth-title { font-size:22px; font-weight:950; color:#172033; margin:0 0 6px; }
+        .auth-sub { font-size:12px; font-weight:800; color:#7b8798; line-height:1.6; margin:0 0 20px; }
+        .auth-form { display:flex; flex-direction:column; gap:12px; }
+        .auth-field { display:flex; flex-direction:column; gap:7px; }
+        .auth-field label { font-size:11px; font-weight:900; color:var(--text-secondary); }
+        .auth-field input {
+            height:44px; border:1px solid #dfe7f1; border-radius:14px; padding:0 13px; outline:none;
+            background:#fff; color:var(--text-main); font-size:14px; font-weight:800; transition:.2s;
+        }
+        .auth-field input:focus { border-color:rgba(0,122,255,.45); box-shadow:var(--ring-blue); }
+        .auth-error { min-height:18px; color:#d92d20; font-size:12px; font-weight:800; }
+        .auth-actions { display:flex; gap:10px; margin-top:2px; }
+        .auth-actions .auth-btn { flex:1; height:42px; font-size:12px; }
+        .auth-foot { margin-top:16px; padding-top:14px; border-top:1px solid #edf2f7; color:#98a2b3; font-size:11px; font-weight:800; line-height:1.6; }
         .ocr-panel {
             width: min(980px, 100%); max-height: min(92vh, 980px); overflow: auto;
             background: linear-gradient(180deg, #fff, #f8fafc); border-radius: 18px; box-shadow: 0 28px 80px rgba(15,23,42,0.24);
@@ -722,10 +791,15 @@
                 border-bottom-color: rgba(15,23,42,0.06);
                 box-shadow: 0 8px 26px rgba(15,23,42,0.07);
             }
+            .header-actions { flex-direction:column; align-items:stretch; gap:8px; }
+            .auth-controls { justify-content:space-between; }
+            .auth-badge, .auth-btn { height:32px; font-size:10px; padding:0 10px; }
 
             .brand { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+            .brand-title-row { gap:7px; }
             .brand h1 { font-size: 18px; line-height: 1; }
             .brand p { font-size: 9px; transform: translateY(-1px); }
+            .school-badge { height:21px; padding:0 8px; font-size:10px; }
             .nav-toggle {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 3px;
@@ -965,6 +1039,9 @@
                 max-height: 94dvh;
                 border-radius: 22px 22px 0 0;
             }
+            .auth-modal { padding:14px; align-items:flex-end; }
+            .auth-panel { border-radius:22px; padding:22px; }
+            .auth-actions { flex-direction:column; }
             .ocr-panel-head { padding: 16px; }
             .ocr-body { padding: 16px; }
             .ocr-actions { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(248,250,252,0), #f8fafc 24%); padding-top: 12px; }
@@ -992,7 +1069,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.61</span>
+                <span>INTELLIGENT ASSET OS · V6.73</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1006,16 +1083,49 @@
     <span id="sync-indicator-text">正在同步数据...</span>
 </div>
 
+<div id="auth-modal" class="auth-modal active" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <div class="auth-panel">
+        <h2 id="auth-title" class="auth-title">进入 SYDRRO-TECH</h2>
+        <p class="auth-sub">管理员可录单、改状态和维护库存；只读账号可登录查看但不能保存数据。</p>
+        <div class="auth-form">
+            <div class="auth-field">
+                <label for="auth-username">账号</label>
+                <input id="auth-username" type="text" autocomplete="username" placeholder="请输入账号">
+            </div>
+            <div class="auth-field">
+                <label for="auth-password">密码</label>
+                <input id="auth-password" type="password" autocomplete="current-password" placeholder="请输入密码">
+            </div>
+            <div id="auth-error" class="auth-error"></div>
+            <div class="auth-actions">
+                <button type="button" class="auth-btn primary" onclick="loginAdmin()">登录</button>
+                <button type="button" class="auth-btn" onclick="enterReadOnly()">只读查看</button>
+            </div>
+        </div>
+        <div class="auth-foot">提示：只读模式可以查看调度、库存、对账和异常，但不能保存任何数据。</div>
+    </div>
+</div>
+
 <header>
     <div class="brand">
-        <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V6.61</p>
+        <div class="brand-title-row">
+            <h1>SYDRRO-TECH</h1>
+            <span id="school-badge" class="school-badge"></span>
+        </div>
+        <p>INTELLIGENT ASSET OS · V6.73</p>
     </div>
-    <div class="nav-toggle">
-        <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
-        <button id="btn-exception" class="nav-btn" onclick="switchPage('exceptions')">异常管理<span id="nav-exception-count" class="nav-count"></span></button>
-        <button id="btn-fin" class="nav-btn" onclick="switchPage('finance')">对账统计</button>
-        <button id="btn-inv" class="nav-btn" onclick="switchPage('inventory')">库存管理</button>
+    <div class="header-actions">
+        <div class="nav-toggle">
+            <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
+            <button id="btn-exception" class="nav-btn" onclick="switchPage('exceptions')">异常管理<span id="nav-exception-count" class="nav-count"></span></button>
+            <button id="btn-fin" class="nav-btn" onclick="switchPage('finance')">对账统计</button>
+            <button id="btn-inv" class="nav-btn" onclick="switchPage('inventory')">库存管理</button>
+        </div>
+        <div class="auth-controls">
+            <span id="auth-badge" class="auth-badge">只读模式</span>
+            <button id="auth-login-open" class="auth-btn primary viewer-only" onclick="openAuthModal()">登录 / 切换</button>
+            <button id="auth-logout" class="auth-btn session-only" onclick="logoutAdmin()">退出</button>
+        </div>
     </div>
 </header>
 
@@ -1059,7 +1169,7 @@
             <div class="card">
                 <div class="card-head">
                     <div class="card-title">🗓 资产占用档期明细</div>
-                    <button class="card-tool-btn" onclick="openImageOrderModal()">手动录单</button>
+                    <button class="card-tool-btn admin-only" onclick="openImageOrderModal()">手动录单</button>
                 </div>
                 <div class="table-scroll table-scroll-wide">
                     <table id="main-table">
@@ -1071,6 +1181,7 @@
 
             <div class="card">
                 <div class="card-title">🔋 数字化实时库存</div>
+                <div class="readonly-note">当前为只读模式，只展示库存状态和档期占用。</div>
                 <div id="free-list"></div>
             </div>
         </div>
@@ -1095,6 +1206,7 @@
     </div>
 
     <div id="finance" class="page">
+        <div id="finance-denied" class="finance-denied">你没有权限查看此页面</div>
         <div class="fin-kpi-grid">
             <div class="fin-stat-box primary">
                 <h2 style="opacity: 1; color: #e0f0ff;">近30天总营收</h2>
@@ -1206,6 +1318,7 @@
         <div class="inventory-layout">
             <div class="card">
                 <div class="card-title">➕ 添加 / 修改设备</div>
+                <div class="readonly-note">当前为只读模式，库存维护需要管理员登录。</div>
                 <div class="inv-form">
                     <input type="hidden" id="inv-edit-key">
                     <div class="form-row">
@@ -1213,7 +1326,7 @@
                             <label>机型</label>
                             <div class="model-picker">
                                 <select id="inv-model"></select>
-                                <button type="button" class="model-add-btn" onclick="addNewModel()">新增机型</button>
+                                <button type="button" class="model-add-btn admin-only" onclick="addNewModel()">新增机型</button>
                             </div>
                         </div>
                         <div class="form-field">
@@ -1236,8 +1349,8 @@
                         <textarea id="inv-note" placeholder="镜头维修、外观划痕、自用保留等"></textarea>
                     </div>
                     <div class="inv-actions">
-                        <button class="inv-btn primary" onclick="saveInventoryItem()">保存设备</button>
-                        <button class="inv-btn light" onclick="resetInventoryForm()">清空</button>
+                        <button class="inv-btn primary admin-only" onclick="saveInventoryItem()">保存设备</button>
+                        <button class="inv-btn light admin-only" onclick="resetInventoryForm()">清空</button>
                     </div>
                     <div class="inv-note">只有“正常可租”的设备会进入 READY 库存和出租率计算；维修、报废、自用、丢失不会拉低出租率。</div>
                 </div>
@@ -1247,7 +1360,7 @@
                 <div class="card-title">📦 库存设备列表</div>
                 <div class="inv-toolbar">
                     <input id="inv-search" class="inv-search" placeholder="搜索机型、编号、状态、备注" oninput="renderInventoryManager()">
-                    <button class="inv-btn light" onclick="seedInventoryFromOrders()">从订单补全设备</button>
+                    <button class="inv-btn light admin-only" onclick="seedInventoryFromOrders()">从订单补全设备</button>
                 </div>
                 <div class="table-scroll">
                     <table id="inventory-table" class="compact-table">
@@ -1342,6 +1455,7 @@
     let customModels = []; // 自定义机型选项
     let currentActionFilter = 'all'; // all / ship / overdue / return / done
     let currentActionDayOffset = 0; // 0=today, 1=tomorrow, up to 3 days ahead
+    let currentAuth = { role: 'viewer', username: 'viewer', label: '', permissions: { finance: true }, authenticated: false, checked: false };
     let dragCounter = 0;
     let chartTrend = null;
     let chartPie = null;
@@ -1393,8 +1507,11 @@
 
     const REQUIRED_ORDER_FIELDS = ['机器', '编号', '起租日', '结束日'];
     const LOCAL_DATA_FILE = 'data.xlsx';
-        const STATE_API_URL = './api/state';
-        const DATA_XLSX_API_URL = './api/data-xlsx';
+    const STATE_API_URL = './api/state';
+    const DATA_XLSX_API_URL = './api/data-xlsx';
+    const AUTH_SESSION_API_URL = './api/session';
+    const AUTH_LOGIN_API_URL = './api/login';
+    const AUTH_LOGOUT_API_URL = './api/logout';
     const XLSX_SCRIPT_URL = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
     const ECHARTS_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
     const RECENT_DONE_DAYS = 3;
@@ -1490,6 +1607,141 @@
         const indicator = document.getElementById('sync-indicator');
         clearTimeout(syncIndicatorTimer);
         if (indicator) indicator.classList.remove('active');
+    }
+
+    function isAdminMode() {
+        return currentAuth.role === 'admin';
+    }
+
+    function canViewFinancePage() {
+        return currentAuth.permissions?.finance !== false;
+    }
+
+    function setAuthMode(role = 'viewer', username = 'viewer', authenticated = false, options = {}) {
+        const normalizedRole = role === 'admin' ? 'admin' : 'viewer';
+        const normalizedUsername = username || (normalizedRole === 'admin' ? 'admin' : 'viewer');
+        currentAuth = {
+            role: normalizedRole,
+            username: normalizedUsername,
+            label: options.label || '',
+            permissions: options.permissions || { finance: true },
+            authenticated: Boolean(authenticated),
+            checked: true
+        };
+        document.documentElement.dataset.authRole = currentAuth.role;
+        document.documentElement.dataset.authUser = currentAuth.authenticated ? 'session' : 'viewer';
+        document.documentElement.dataset.financeAccess = canViewFinancePage() ? 'allowed' : 'denied';
+        const badge = document.getElementById('auth-badge');
+        if (badge) {
+            if (currentAuth.role === 'admin') {
+                badge.textContent = `管理员：${currentAuth.username}`;
+            } else if (currentAuth.authenticated && currentAuth.username !== 'viewer') {
+                badge.textContent = `只读：${currentAuth.username}`;
+            } else {
+                badge.textContent = '只读模式';
+            }
+        }
+        const schoolBadge = document.getElementById('school-badge');
+        if (schoolBadge) {
+            schoolBadge.textContent = currentAuth.label;
+            schoolBadge.classList.toggle('active', Boolean(currentAuth.label));
+        }
+        if (isFinancePageActive() && !canViewFinancePage()) {
+            pendingChartPayload = null;
+        }
+        if (currentAuth.role === 'admin' || currentAuth.authenticated) {
+            closeAuthModal();
+        }
+    }
+
+    function openAuthModal(message = '') {
+        const modal = document.getElementById('auth-modal');
+        const error = document.getElementById('auth-error');
+        if (error) error.textContent = message;
+        if (modal) modal.classList.add('active');
+        setTimeout(() => document.getElementById('auth-password')?.focus(), 40);
+    }
+
+    function closeAuthModal() {
+        document.getElementById('auth-modal')?.classList.remove('active');
+    }
+
+    function enterReadOnly() {
+        sessionStorage.setItem('sydrro_readonly_ack', '1');
+        setAuthMode('viewer', 'viewer', false);
+        closeAuthModal();
+        showToast('已进入只读模式');
+    }
+
+    function requireAdmin(action = '此操作') {
+        if (isAdminMode()) return true;
+        openAuthModal(`${action}需要管理员权限`);
+        showToast('当前为只读模式，管理员登录后才能操作');
+        return false;
+    }
+
+    async function refreshAuthSession(options = {}) {
+        const { showLogin = true } = options;
+        if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) {
+            setAuthMode('viewer', 'viewer', false);
+            if (showLogin && !sessionStorage.getItem('sydrro_readonly_ack')) openAuthModal('静态页面只能只读查看，请使用本地/服务器版本登录管理员');
+            return currentAuth;
+        }
+
+        try {
+            const response = await fetch(AUTH_SESSION_API_URL, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const session = await response.json();
+            setAuthMode(session.role === 'admin' ? 'admin' : 'viewer', session.username || 'viewer', Boolean(session.authenticated), {
+                label: session.label || '',
+                permissions: session.permissions || { finance: true }
+            });
+        } catch (err) {
+            console.warn('读取登录状态失败', err);
+            setAuthMode('viewer', 'viewer', false);
+        }
+
+        if (showLogin && !isAdminMode() && !currentAuth.authenticated && !sessionStorage.getItem('sydrro_readonly_ack')) openAuthModal();
+        return currentAuth;
+    }
+
+    async function loginAdmin() {
+        const username = document.getElementById('auth-username')?.value?.trim() || '';
+        const password = document.getElementById('auth-password')?.value || '';
+        const error = document.getElementById('auth-error');
+        if (error) error.textContent = '';
+        try {
+            const response = await fetch(AUTH_LOGIN_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.authenticated || !['admin', 'viewer'].includes(result.role)) {
+                throw new Error(result.message || '登录失败');
+            }
+            sessionStorage.removeItem('sydrro_readonly_ack');
+            const nextRole = result.role === 'admin' ? 'admin' : 'viewer';
+            setAuthMode(nextRole, result.username || username, true, {
+                label: result.label || '',
+                permissions: result.permissions || { finance: true }
+            });
+            showToast(nextRole === 'admin' ? '管理员已登录' : '只读账号已登录');
+        } catch (err) {
+            if (error) error.textContent = err.message || '登录失败';
+        }
+    }
+
+    async function logoutAdmin() {
+        try {
+            if (location.protocol !== 'file:' && !location.hostname.endsWith('github.io')) {
+                await fetch(AUTH_LOGOUT_API_URL, { method: 'POST' }).catch(() => {});
+            }
+        } finally {
+            setAuthMode('viewer', 'viewer', false);
+            sessionStorage.removeItem('sydrro_readonly_ack');
+            openAuthModal('已退出登录，可选择只读查看');
+        }
     }
 
     function escapeHtml(value) {
@@ -1649,6 +1901,18 @@
         return bucket.pendingShipList.length + bucket.overdueReturnList.length + bucket.pendingReturnList.length;
     }
 
+    function getDefaultActionFilterForBucket(bucket) {
+        if (!bucket) return 'all';
+        if (bucket.pendingShipList.length) return 'ship';
+        if (bucket.pendingReturnList.length) return 'return';
+        if (bucket.overdueReturnList.length) return 'overdue';
+        return 'all';
+    }
+
+    function getActionFilterLabel(filterKey) {
+        return ({ all: '未处理', ship: '待发货', return: '待归还', overdue: '逾期未还', done: '已处理' })[filterKey] || '未处理';
+    }
+
     function getDoneRecordDate(statusRecord, fallbackDate) {
         return parseStorageDate(statusRecord?.updatedAt) || fallbackDate;
     }
@@ -1679,7 +1943,7 @@
     function loadBrowserCacheState() {
         shippingStatus = readJsonState(STORAGE_KEYS.shippingStatus, {}) || {};
         returnStatus = readJsonState(STORAGE_KEYS.returnStatus, {}) || {};
-        currentActionFilter = normalizeActionFilter(localStorage.getItem(STORAGE_KEYS.actionFilter));
+        currentActionFilter = 'all';
         currentActionDayOffset = normalizeActionDayOffset(localStorage.getItem(STORAGE_KEYS.actionDayOffset));
         inventoryData = readJsonState(STORAGE_KEYS.inventoryData, []) || [];
         customModels = readJsonState(STORAGE_KEYS.customModels, []) || [];
@@ -1721,6 +1985,7 @@
             finishAppBoot();
         }
 
+        refreshAuthSession({ showLogin: true }).catch(err => console.warn('登录状态初始化失败', err));
         setTimeout(() => {
             hydrateDataSourcesAfterBoot().catch(err => console.warn('后台数据同步失败', err));
         }, 0);
@@ -1739,6 +2004,10 @@
         const btnMap = { scheduling: 'sched', exceptions: 'exception', finance: 'fin', inventory: 'inv' };
         document.getElementById('btn-' + btnMap[p]).classList.add('active');
 
+        if(p === 'finance' && !canViewFinancePage()) {
+            pendingChartPayload = null;
+            return;
+        }
         if(p === 'finance') {
             try {
                 await initCharts();
@@ -1756,6 +2025,7 @@
     }
 
     function importOrderFile(file) {
+        if (!requireAdmin('导入订单')) return;
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (ev) => {
@@ -1785,7 +2055,7 @@
             const buffer = await response.arrayBuffer();
             const { rows, validation } = await readOrderRowsFromArrayBuffer(buffer);
             applyOrderRows(rows, validation, { sourceName: LOCAL_DATA_FILE, notify, seedNotify: false, persist: false });
-            if (persist) {
+            if (persist && isAdminMode()) {
                 await persistUnifiedStateNow().catch(err => console.warn('统一数据源同步失败', err));
             }
             return true;
@@ -1876,6 +2146,7 @@
     }
 
     function openImageOrderModal() {
+        if (!requireAdmin('手动录单')) return;
         renderOcrModelOptions();
         activeImageOrderIndex = -1;
         imageOrderFile = null;
@@ -2284,6 +2555,9 @@
     }
 
     async function persistDataWorkbook(arrayBuffer) {
+        if (!requireAdmin('写入 data.xlsx')) {
+            throw new Error('当前为只读模式');
+        }
         if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) {
             throw new Error('写入 data.xlsx 需要通过本地服务打开页面');
         }
@@ -2521,7 +2795,7 @@
         newRows.forEach(row => {
             const key = normalizeKey(row['机器'], row['编号']);
             const period = getOrderPeriodFromRow(row);
-        if (!key || !period) throw new Error(`${getOrderDisplayName(row, '新订单')} 缺少可用编号或日期`);
+            if (!key || !period) throw new Error(`${getOrderDisplayName(row, '新订单')} 缺少可用编号或日期`);
             const availabilityIssue = getDeviceAvailabilityIssue(row['机器'], row['编号']);
             if (availabilityIssue) throw new Error(availabilityIssue);
 
@@ -2530,7 +2804,7 @@
             );
             if (conflict) {
                 const conflictRow = conflict.row || {};
-                    throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${getOrderDisplayName(conflictRow, '其他订单')} 占用`);
+                throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${getOrderDisplayName(conflictRow, '其他订单')} 占用`);
             }
             reservedRows.push(row);
         });
@@ -2585,6 +2859,7 @@
     }
 
     async function appendImageOrderRowsToXlsx(newRows) {
+        if (!requireAdmin('保存订单')) throw new Error('当前为只读模式');
         await ensureXlsx();
         if (!newRows.length) throw new Error('没有可写入的订单');
 
@@ -2610,6 +2885,7 @@
     }
 
     async function saveImageOrderToXlsx() {
+        if (!requireAdmin('保存订单')) return;
         try {
             const fields = readOcrFormFields();
             const assignment = assignDeviceIdToFields(fields);
@@ -2631,6 +2907,7 @@
     }
 
     async function saveBatchImageOrdersToXlsx() {
+        if (!requireAdmin('批量保存订单')) return;
         try {
             if (!imageOrderBatch.length) throw new Error('批量录单已取消，请逐单手动写入');
             syncActiveImageOrderFromForm();
@@ -2668,11 +2945,21 @@
         }
     }
 
-    window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCounter++; document.getElementById('overlay').style.display = 'flex'; });
+    window.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        if (!isAdminMode()) return;
+        dragCounter++;
+        document.getElementById('overlay').style.display = 'flex';
+    });
     window.addEventListener('dragover', (e) => { e.preventDefault(); });
-    window.addEventListener('dragleave', (e) => { dragCounter--; if (dragCounter === 0) document.getElementById('overlay').style.display = 'none'; });
+    window.addEventListener('dragleave', (e) => {
+        if (!isAdminMode()) return;
+        dragCounter = Math.max(0, dragCounter - 1);
+        if (dragCounter === 0) document.getElementById('overlay').style.display = 'none';
+    });
     window.addEventListener('drop', (e) => {
         e.preventDefault(); dragCounter = 0; document.getElementById('overlay').style.display = 'none';
+        if (!requireAdmin('导入订单')) return;
         importOrderFile(e.dataTransfer.files[0]);
     });
 
@@ -2795,6 +3082,7 @@
     }
 
     function addNewModel() {
+        if (!requireAdmin('新增机型')) return;
         const val = prompt('请输入新增机型名称，例如：ZV1 / GR3X / CCD200');
         if (!val) return;
         const model = String(val).trim().toUpperCase();
@@ -2969,14 +3257,15 @@
                 <td>${renderInventoryNextSchedule(itemSchedule)}</td>
                 <td style="color:var(--text-secondary);max-width:260px;">${note}</td>
                 <td><div class="inv-op">
-                    <button class="edit" onclick="editInventoryItem(decodeURIComponent('${key}'))">编辑</button>
-                    <button class="delete" onclick="deleteInventoryItem(decodeURIComponent('${key}'))">删除</button>
+                    <button class="edit admin-only" onclick="editInventoryItem(decodeURIComponent('${key}'))">编辑</button>
+                    <button class="delete admin-only" onclick="deleteInventoryItem(decodeURIComponent('${key}'))">删除</button>
                 </div></td>
             </tr>`;
         }).join('') || '<tr><td colspan="7" class="empty-row">暂无库存设备</td></tr>';
     }
 
     function resetInventoryForm() {
+        if (!isAdminMode()) return;
         ['inv-edit-key','inv-model','inv-id','inv-note'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = '';
@@ -2987,6 +3276,7 @@
     }
 
     function saveInventoryItem() {
+        if (!requireAdmin('保存库存')) return;
         const model = String(document.getElementById('inv-model').value || '').trim().toUpperCase();
         const id = String(document.getElementById('inv-id').value || '').trim();
         const status = document.getElementById('inv-status').value || 'normal';
@@ -3021,6 +3311,7 @@
     }
 
     function editInventoryItem(key) {
+        if (!requireAdmin('编辑库存')) return;
         const item = inventoryData.find(x => normalizeKey(x.model, x.id) === key);
         if (!item) return;
         document.getElementById('inv-edit-key').value = key;
@@ -3032,6 +3323,7 @@
     }
 
     function deleteInventoryItem(key) {
+        if (!requireAdmin('删除库存')) return;
         const item = inventoryData.find(x => normalizeKey(x.model, x.id) === key);
         if (!item) return;
         if (!confirm(`确定删除 ${String(item.model).toUpperCase()} #${item.id} 吗？`)) return;
@@ -3043,6 +3335,10 @@
     }
 
     function seedInventoryFromOrders(options = {}) {
+        if (!isAdminMode() && options.notify !== false) {
+            requireAdmin('补全库存');
+            return;
+        }
         const { notify = true, refresh = true } = options;
         let added = 0;
         const seen = new Set(inventoryData.map(x => normalizeKey(x.model, x.id)));
@@ -3116,6 +3412,7 @@
     }
 
     function setShipStatus(orderKey, status) {
+        if (!requireAdmin('修改发货状态')) return;
         writeStatusRecord(shippingStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus);
         scheduleDashboardUpdate();
@@ -3123,6 +3420,7 @@
     }
 
     function setReturnStatus(orderKey, status) {
+        if (!requireAdmin('修改归还状态')) return;
         writeStatusRecord(returnStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.returnStatus, returnStatus);
         scheduleDashboardUpdate();
@@ -3186,7 +3484,7 @@
         rawData = backup.rawData || [];
         shippingStatus = backup.shippingStatus || {};
         returnStatus = backup.returnStatus || {};
-        currentActionFilter = normalizeActionFilter(backup.currentActionFilter);
+        currentActionFilter = 'all';
         currentActionDayOffset = normalizeActionDayOffset(backup.currentActionDayOffset);
         inventoryData = Array.isArray(backup.inventoryData) && backup.inventoryData.length ? backup.inventoryData : getDefaultInventory();
         customModels = Array.isArray(backup.customModels) ? backup.customModels : [];
@@ -3214,6 +3512,7 @@
     }
 
     async function persistUnifiedStateNow() {
+        if (!requireAdmin('保存数据')) return false;
         if (location.protocol === 'file:') return false;
         saveAllLocalState();
         const json = JSON.stringify(buildBackupPayload());
@@ -3230,6 +3529,10 @@
     }
 
     function saveAutoBackup() {
+        if (!isAdminMode()) {
+            saveAllLocalState();
+            return;
+        }
         if (location.protocol === 'file:') return;
         saveAllLocalState();
         const json = JSON.stringify(buildBackupPayload());
@@ -3247,6 +3550,7 @@
 
     function scheduleAutoBackup() {
         if (location.protocol === 'file:') return;
+        if (!isAdminMode()) return;
         clearTimeout(autoBackupTimer);
         autoBackupTimer = setTimeout(saveAutoBackup, 900);
     }
@@ -3845,10 +4149,10 @@
             ].join('')
         };
 
-        const pendingSectionHtml = [sectionMap.ship, sectionMap.overdue, sectionMap.return].join('');
-        const sectionHtml = currentActionFilter === 'all'
-            ? pendingSectionHtml
-            : (sectionMap[currentActionFilter] || '');
+        const defaultActionFilter = getDefaultActionFilterForBucket(selectedActionBucket);
+        const effectiveActionFilter = currentActionFilter === 'all' ? defaultActionFilter : currentActionFilter;
+        const sectionHtml = effectiveActionFilter === 'all' ? '' : (sectionMap[effectiveActionFilter] || '');
+        const activeSummaryFilter = currentActionFilter === 'all' ? defaultActionFilter : currentActionFilter;
 
         const actionDayTabsHtml = `
             <div class="action-day-tabs">
@@ -3867,20 +4171,20 @@
         const summaryHtml = `
             ${actionDayTabsHtml}
             <div class="action-summary">
-                <div class="summary-chip ship ${currentActionFilter === 'ship' ? 'active' : ''}" onclick="setActionFilter('ship')">
+                <div class="summary-chip ship ${activeSummaryFilter === 'ship' ? 'active' : ''}" onclick="setActionFilter('ship')">
                     <span class="s-label">待发货</span><span class="s-value">${pendingShipList.length}</span><span class="s-tip">点击筛选</span>
                 </div>
-                <div class="summary-chip overdue ${currentActionFilter === 'overdue' ? 'active' : ''}" onclick="setActionFilter('overdue')">
-                    <span class="s-label">逾期未还</span><span class="s-value">${overdueReturnList.length}</span><span class="s-tip">点击筛选</span>
-                </div>
-                <div class="summary-chip return ${currentActionFilter === 'return' ? 'active' : ''}" onclick="setActionFilter('return')">
+                <div class="summary-chip return ${activeSummaryFilter === 'return' ? 'active' : ''}" onclick="setActionFilter('return')">
                     <span class="s-label">待归还</span><span class="s-value">${pendingReturnList.length}</span><span class="s-tip">点击筛选</span>
                 </div>
-                <div class="summary-chip done ${currentActionFilter === 'done' ? 'active' : ''}" onclick="setActionFilter('done')">
+                <div class="summary-chip overdue ${activeSummaryFilter === 'overdue' ? 'active' : ''}" onclick="setActionFilter('overdue')">
+                    <span class="s-label">逾期未还</span><span class="s-value">${overdueReturnList.length}</span><span class="s-tip">点击筛选</span>
+                </div>
+                <div class="summary-chip done ${activeSummaryFilter === 'done' ? 'active' : ''}" onclick="setActionFilter('done')">
                     <span class="s-label">已处理</span><span class="s-value">${shippedList.length + returnedList.length}</span><span class="s-tip">近${RECENT_DONE_DAYS}天</span>
                 </div>
             </div>
-            <div class="filter-hint">当前日期：${getActionDayLabel(selectedActionOffset)} ${formatDateStr(selectedActionDate)} · 筛选：${currentActionFilter === 'all' ? '未处理' : ({ship:'待发货', overdue:'逾期未还', return:'待归还', done:'已处理'}[currentActionFilter])}</div>`;
+            <div class="filter-hint">当前日期：${getActionDayLabel(selectedActionOffset)} ${formatDateStr(selectedActionDate)} · 优先显示：${getActionFilterLabel(activeSummaryFilter)}</div>`;
 
         const emptyActionText = currentActionFilter === 'all'
             ? '当前暂无未处理订单，可点击已处理查看记录'
