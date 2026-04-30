@@ -16,6 +16,7 @@ import tempfile
 import threading
 import time
 from urllib.error import URLError
+from urllib.parse import unquote
 from urllib.request import urlopen
 import webbrowser
 import zipfile
@@ -195,6 +196,27 @@ def build_clear_session_cookie():
     return f"{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax; HttpOnly"
 
 
+def normalized_request_path(path):
+    return unquote((path or "/").split("?", 1)[0])
+
+
+def is_private_static_path(path):
+    normalized = normalized_request_path(path).lstrip("/")
+    name = Path(normalized).name.lower()
+    return (
+        normalized.startswith(".git/")
+        or name == "auth-config.json"
+        or name == "sydrro-local-server.py"
+        or name == "sydrro-data.sqlite3"
+        or name.startswith("sydrro-data.sqlite3-")
+    )
+
+
+def requires_read_session(path):
+    normalized = normalized_request_path(path)
+    return normalized in ("/api/state", "/api/backup", "/data.xlsx", "/sydrro-backup.json")
+
+
 def default_state():
     return {
         "app": "SYDRRO-TECH",
@@ -310,35 +332,46 @@ class SydrroHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
-        if self.path.split("?", 1)[0] == "/api/session":
+        path = normalized_request_path(self.path)
+        if path == "/api/session":
             self.send_session()
             return
-        if self.path.split("?", 1)[0] == "/api/state":
+        if is_private_static_path(path):
+            self.send_error(404, "Not Found")
+            return
+        if path == "/api/state":
+            if not self.require_session():
+                return
             self.send_state()
             return
-        if self.path.split("?", 1)[0] == "/api/backup":
+        if path == "/api/backup":
+            if not self.require_session():
+                return
             self.send_state()
+            return
+        if requires_read_session(path) and not self.require_session():
             return
         super().do_GET()
 
     def do_POST(self):
-        if self.path.split("?", 1)[0] == "/api/login":
+        path = normalized_request_path(self.path)
+        if path == "/api/login":
             self.receive_login()
             return
-        if self.path.split("?", 1)[0] == "/api/logout":
+        if path == "/api/logout":
             self.receive_logout()
             return
-        if self.path.split("?", 1)[0] == "/api/state":
+        if path == "/api/state":
             if not self.require_admin():
                 return
             self.receive_state()
             return
-        if self.path.split("?", 1)[0] == "/api/backup":
+        if path == "/api/backup":
             if not self.require_admin():
                 return
             self.receive_state()
             return
-        if self.path.split("?", 1)[0] == "/api/data-xlsx":
+        if path == "/api/data-xlsx":
             if not self.require_admin():
                 return
             self.receive_data_xlsx()
@@ -364,6 +397,12 @@ class SydrroHandler(SimpleHTTPRequestHandler):
     def is_admin(self):
         session = self.get_auth_session()
         return bool(session and session.get("role") == "admin")
+
+    def require_session(self):
+        if self.get_auth_session():
+            return True
+        self.send_json({"ok": False, "error": "login_required", "message": "请先登录后访问数据"}, status=401)
+        return False
 
     def require_admin(self):
         if self.is_admin():

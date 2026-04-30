@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-auth-role="viewer" data-auth-user="viewer" data-finance-access="allowed">
+<html lang="zh-CN" data-auth-role="viewer" data-auth-user="viewer" data-finance-access="allowed" data-authenticated="false">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.73">
-    <title>SYDRRO-TECH V6.73 | 智能资产终端</title>
+    <meta name="app-version" content="V6.79">
+    <title>SYDRRO-TECH V6.79 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -102,6 +102,12 @@
         html[data-auth-user="viewer"] .session-only { display:none !important; }
         html[data-auth-role="viewer"] .ship-btn { display:none !important; }
         html[data-finance-access="denied"] #finance > :not(#finance-denied) { display:none !important; }
+        html[data-authenticated="false"] header,
+        html[data-authenticated="false"] .status-bar,
+        html[data-authenticated="false"] .container,
+        html[data-authenticated="false"] #drop-zone {
+            visibility:hidden;
+        }
         .readonly-note {
             display:none; margin-bottom:14px; padding:11px 13px; border-radius:14px;
             background:rgba(0,122,255,0.06); border:1px solid rgba(0,122,255,0.12);
@@ -129,6 +135,15 @@
         .input-box label { font-size: 11px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; }
         .input-box input { border: 1px solid #e6ebf2; font-size: 17px; font-weight: 800; color: var(--blue); outline: none; width: 118px; background: rgba(248,250,252,0.92); padding: 9px 11px; border-radius: 12px; transition: 0.2s; }
         .input-box input:focus { border-color: rgba(0,122,255,0.35); background: #fff; box-shadow: var(--ring-blue); }
+        .query-open-btn {
+            align-self:flex-end; height:42px; border:0; border-radius:13px; padding:0 17px;
+            display:inline-flex; align-items:center; justify-content:center; gap:7px;
+            background:linear-gradient(135deg, #101828, #344054); color:#fff; cursor:pointer;
+            font-size:12px; font-weight:900; white-space:nowrap; box-shadow:0 12px 24px rgba(15,23,42,0.14);
+            transition:transform .2s, box-shadow .2s, filter .2s;
+        }
+        .query-open-btn:hover { transform:translateY(-1px); box-shadow:0 16px 30px rgba(15,23,42,0.18); filter:brightness(1.05); }
+        .query-open-btn:focus-visible { outline:3px solid rgba(0,122,255,0.18); outline-offset:2px; }
 
         .quick-metrics { display: grid; grid-template-columns: repeat(3, minmax(96px, 1fr)); gap: 12px; }
         .metric-pill {
@@ -591,6 +606,7 @@
             .status-bar { width: calc(100% - 32px); margin: 18px auto; flex-direction: column; align-items: stretch; padding: 16px; }
             .control-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .input-box input { width: 100%; }
+            .query-open-btn { width:100%; grid-column:1 / -1; }
             .quick-metrics { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .container { padding: 0 16px 118px 16px; }
             .card { padding: 18px; border-radius: 18px; }
@@ -673,34 +689,70 @@
         }
         .modal-backdrop.active { display: flex; animation: backdropFade .18s ease-out; }
         .auth-modal {
-            position:fixed; inset:0; z-index:1500; display:none; align-items:center; justify-content:center; padding:24px;
+            position:fixed; inset:0; z-index:1500; display:none; align-items:center; justify-content:center;
+            min-height:100dvh; padding:24px;
             background:rgba(15,23,42,0.34); backdrop-filter:blur(16px);
         }
         .auth-modal.active { display:flex; animation:backdropFade .18s ease-out; }
         .auth-panel {
-            width:min(430px, 100%); border-radius:24px; padding:26px;
+            width:min(430px, 100%); max-height:calc(100dvh - 48px); overflow:auto; border-radius:24px; padding:28px;
             background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
             border:1px solid rgba(255,255,255,0.88); box-shadow:0 30px 90px rgba(15,23,42,0.26);
-            animation:panelRise .24s ease-out; position:relative; overflow:hidden;
+            animation:panelRise .24s ease-out; position:relative;
         }
         .auth-panel::before {
             content:""; position:absolute; inset:0 0 auto 0; height:4px;
             background:linear-gradient(90deg, #007aff, #19c39a);
         }
-        .auth-title { font-size:22px; font-weight:950; color:#172033; margin:0 0 6px; }
-        .auth-sub { font-size:12px; font-weight:800; color:#7b8798; line-height:1.6; margin:0 0 20px; }
-        .auth-form { display:flex; flex-direction:column; gap:12px; }
-        .auth-field { display:flex; flex-direction:column; gap:7px; }
+        .auth-title { font-size:24px; font-weight:950; color:#172033; margin:2px 0 8px; text-align:center; }
+        .auth-sub { font-size:12px; font-weight:800; color:#7b8798; line-height:1.65; margin:0 auto 22px; text-align:center; max-width:330px; }
+        .auth-form { display:flex; flex-direction:column; gap:14px; }
+        .auth-field { display:flex; flex-direction:column; gap:8px; }
         .auth-field label { font-size:11px; font-weight:900; color:var(--text-secondary); }
         .auth-field input {
-            height:44px; border:1px solid #dfe7f1; border-radius:14px; padding:0 13px; outline:none;
+            height:48px; border:1px solid #dfe7f1; border-radius:15px; padding:0 14px; outline:none;
             background:#fff; color:var(--text-main); font-size:14px; font-weight:800; transition:.2s;
         }
         .auth-field input:focus { border-color:rgba(0,122,255,.45); box-shadow:var(--ring-blue); }
         .auth-error { min-height:18px; color:#d92d20; font-size:12px; font-weight:800; }
-        .auth-actions { display:flex; gap:10px; margin-top:2px; }
-        .auth-actions .auth-btn { flex:1; height:42px; font-size:12px; }
+        .auth-actions { display:flex; gap:10px; margin-top:4px; }
+        .auth-actions .auth-btn { flex:1; height:52px; font-size:14px; border-radius:16px; }
         .auth-foot { margin-top:16px; padding-top:14px; border-top:1px solid #edf2f7; color:#98a2b3; font-size:11px; font-weight:800; line-height:1.6; }
+        .schedule-query-panel {
+            width:min(1120px, 100%); max-height:min(88vh, 920px); display:flex; flex-direction:column;
+            background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+            border:1px solid rgba(255,255,255,0.88); border-radius:22px; box-shadow:0 28px 86px rgba(15,23,42,0.24);
+            overflow:hidden; animation:panelRise .22s ease-out;
+        }
+        .schedule-query-head {
+            display:flex; justify-content:space-between; align-items:center; gap:16px;
+            padding:18px 20px; border-bottom:1px solid #e8eef6; background:rgba(255,255,255,0.86);
+            backdrop-filter:blur(16px);
+        }
+        .schedule-query-title { margin:0; font-size:18px; font-weight:950; color:#172033; }
+        .schedule-query-sub { margin-top:4px; font-size:12px; font-weight:800; color:#7b8798; }
+        .schedule-query-body { padding:18px 20px 20px; overflow:auto; display:flex; flex-direction:column; gap:16px; }
+        .schedule-query-section {
+            background:rgba(255,255,255,0.86); border:1px solid #e8eef6; border-radius:18px;
+            padding:14px; box-shadow:0 10px 24px rgba(15,23,42,0.05);
+        }
+        .schedule-query-section-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
+        .schedule-query-section-title { margin:0; font-size:13px; font-weight:950; color:#172033; }
+        .schedule-query-section-note { color:#7b8798; font-size:11px; font-weight:900; white-space:nowrap; }
+        .schedule-query-free-list {
+            display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr)); gap:12px;
+        }
+        .schedule-query-free-list > div { margin-bottom:0 !important; }
+        .schedule-return-btn {
+            height:38px; border:0; border-radius:999px; padding:0 18px; cursor:pointer;
+            background:#101828; color:#fff; font-size:12px; font-weight:900; transition:.2s;
+        }
+        .schedule-return-btn:hover { transform:translateY(-1px); box-shadow:0 12px 24px rgba(15,23,42,.16); }
+        #schedule-query-table { width:100%; min-width:720px; table-layout:fixed; }
+        #schedule-query-table th:nth-child(1), #schedule-query-table td:nth-child(1) { width:52%; }
+        #schedule-query-table th:nth-child(2), #schedule-query-table td:nth-child(2) { width:15%; text-align:center; }
+        #schedule-query-table th:nth-child(3), #schedule-query-table td:nth-child(3) { width:10%; text-align:center; }
+        #schedule-query-table th:nth-child(4), #schedule-query-table td:nth-child(4) { width:23%; text-align:center; }
         .ocr-panel {
             width: min(980px, 100%); max-height: min(92vh, 980px); overflow: auto;
             background: linear-gradient(180deg, #fff, #f8fafc); border-radius: 18px; box-shadow: 0 28px 80px rgba(15,23,42,0.24);
@@ -826,6 +878,7 @@
             .input-box { gap: 5px; }
             .input-box label { font-size: 10px; }
             .input-box input { height: 42px; border-radius: 13px; font-size: 15px; padding: 8px 10px; }
+            .query-open-btn { height:42px; border-radius:13px; }
             .quick-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
             .metric-pill { min-width: 0; padding: 9px 10px; border-radius: 13px; }
             .metric-pill .m-label { font-size: 9px; white-space: nowrap; }
@@ -1005,6 +1058,70 @@
             .inv-op { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .inv-op button { width: 100%; padding: 8px 10px; }
 
+            #schedule-query-modal { padding:0 8px; align-items:flex-end; }
+            .schedule-query-panel {
+                width:100%; max-height:92dvh; border-radius:24px 24px 0 0;
+                box-shadow:0 -18px 54px rgba(15,23,42,0.22);
+            }
+            .schedule-query-head {
+                position:sticky; top:0; z-index:2;
+                display:grid; grid-template-columns:minmax(0, 1fr) auto; align-items:center;
+                padding:18px 14px 12px;
+            }
+            .schedule-query-head::before {
+                content:""; position:absolute; top:7px; left:50%; transform:translateX(-50%);
+                width:42px; height:4px; border-radius:999px; background:#d8dee8;
+            }
+            .schedule-query-title { font-size:16px; line-height:1.2; }
+            .schedule-query-sub { font-size:11px; line-height:1.35; }
+            .schedule-query-body { padding:12px; gap:12px; overscroll-behavior:contain; }
+            .schedule-return-btn {
+                width:auto; min-width:62px; height:34px; padding:0 13px;
+                background:#eef2f7; color:#344054;
+            }
+            .schedule-query-section { padding:12px; border-radius:15px; }
+            .schedule-query-section-head { align-items:flex-start; flex-direction:column; gap:4px; margin-bottom:10px; }
+            .schedule-query-section-note { white-space:normal; }
+            .schedule-query-free-list { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
+            .schedule-query-free-list > div > div:first-child { margin-bottom:6px !important; font-size:9px !important; }
+            .schedule-query-free-list .stock-item {
+                margin-bottom:6px; padding:8px 9px; border-radius:12px;
+                box-shadow:0 6px 14px rgba(15,23,42,0.04);
+            }
+
+            #schedule-query-table,
+            #schedule-query-table tbody,
+            #schedule-query-table tr,
+            #schedule-query-table td {
+                display:block;
+                width:100% !important;
+                min-width:0 !important;
+            }
+            #schedule-query-table thead { display:none; }
+            #schedule-query-table tbody tr {
+                display:grid;
+                grid-template-columns:auto auto minmax(0, 1fr);
+                gap:8px;
+                align-items:center;
+                margin-bottom:10px;
+                padding:12px;
+                border:1px solid #e8eef6;
+                border-radius:16px;
+                background:linear-gradient(180deg, #fff, #f9fbfd);
+                box-shadow:0 8px 20px rgba(15,23,42,0.055);
+            }
+            #schedule-query-table td {
+                border:0;
+                padding:0 !important;
+                text-align:left !important;
+                font-size:12px;
+            }
+            #schedule-query-table td:first-child { grid-column:1 / -1; }
+            #schedule-query-table td:nth-child(2),
+            #schedule-query-table td:nth-child(3),
+            #schedule-query-table td:nth-child(4) { width:auto !important; }
+            #schedule-query-table td:nth-child(4) { justify-self:end; }
+
             .inventory-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 12px; }
             .inv-summary-card { padding: 13px 14px; border-radius: 15px; }
             .inv-summary-card .value { font-size: 24px; }
@@ -1039,9 +1156,20 @@
                 max-height: 94dvh;
                 border-radius: 22px 22px 0 0;
             }
-            .auth-modal { padding:14px; align-items:flex-end; }
-            .auth-panel { border-radius:22px; padding:22px; }
+            .auth-modal {
+                align-items:center; justify-content:center;
+                padding:max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+            }
+            .auth-panel {
+                width:min(390px, calc(100vw - 32px));
+                max-height:calc(100dvh - 32px);
+                border-radius:24px;
+                padding:clamp(20px, 5vw, 26px);
+            }
+            .auth-title { font-size:22px; }
+            .auth-sub { font-size:11px; margin-bottom:18px; }
             .auth-actions { flex-direction:column; }
+            .auth-actions .auth-btn { height:52px; font-size:14px; }
             .ocr-panel-head { padding: 16px; }
             .ocr-body { padding: 16px; }
             .ocr-actions { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(248,250,252,0), #f8fafc 24%); padding-top: 12px; }
@@ -1055,6 +1183,9 @@
             .quick-metrics,
             .fin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .metric-pill .m-label { white-space: normal; }
+            .schedule-query-free-list { grid-template-columns:1fr; }
+            .schedule-query-head { grid-template-columns:1fr; gap:10px; }
+            .schedule-return-btn { width:100%; }
             #inventory-table td,
             #finance-table td,
             #model-rank-table td { grid-template-columns: 64px minmax(0, 1fr); }
@@ -1069,7 +1200,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.73</span>
+                <span>INTELLIGENT ASSET OS · V6.79</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1086,23 +1217,55 @@
 <div id="auth-modal" class="auth-modal active" role="dialog" aria-modal="true" aria-labelledby="auth-title">
     <div class="auth-panel">
         <h2 id="auth-title" class="auth-title">进入 SYDRRO-TECH</h2>
-        <p class="auth-sub">管理员可录单、改状态和维护库存；只读账号可登录查看但不能保存数据。</p>
+        <p class="auth-sub">请先登录后进入系统；管理员可写入维护，只读账号只能查看授权页面。</p>
         <div class="auth-form">
             <div class="auth-field">
                 <label for="auth-username">账号</label>
-                <input id="auth-username" type="text" autocomplete="username" placeholder="请输入账号">
+                <input id="auth-username" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="请输入账号">
             </div>
             <div class="auth-field">
                 <label for="auth-password">密码</label>
-                <input id="auth-password" type="password" autocomplete="current-password" placeholder="请输入密码">
+                <input id="auth-password" type="password" autocomplete="new-password" placeholder="请输入密码">
             </div>
             <div id="auth-error" class="auth-error"></div>
             <div class="auth-actions">
                 <button type="button" class="auth-btn primary" onclick="loginAdmin()">登录</button>
-                <button type="button" class="auth-btn" onclick="enterReadOnly()">只读查看</button>
             </div>
         </div>
-        <div class="auth-foot">提示：只读模式可以查看调度、库存、对账和异常，但不能保存任何数据。</div>
+        <div class="auth-foot">提示：未登录不会加载订单、库存和对账数据。</div>
+    </div>
+</div>
+
+<div id="schedule-query-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="schedule-query-title" onclick="if(event.target===this) closeScheduleQueryModal()">
+    <div class="schedule-query-panel">
+        <div class="schedule-query-head">
+            <div>
+                <h2 id="schedule-query-title" class="schedule-query-title">档期查询结果</h2>
+                <div id="schedule-query-sub" class="schedule-query-sub"></div>
+            </div>
+            <button type="button" class="schedule-return-btn" onclick="closeScheduleQueryModal()">返回</button>
+        </div>
+        <div class="schedule-query-body">
+            <div class="schedule-query-section">
+                <div class="schedule-query-section-head">
+                    <h3 class="schedule-query-section-title">空闲机器</h3>
+                    <span id="schedule-query-free-count" class="schedule-query-section-note"></span>
+                </div>
+                <div id="schedule-query-free-list" class="schedule-query-free-list"></div>
+            </div>
+            <div class="schedule-query-section">
+                <div class="schedule-query-section-head">
+                    <h3 class="schedule-query-section-title">占用档期</h3>
+                    <span class="schedule-query-section-note">包含备货、在租、归还占用</span>
+                </div>
+                <div class="table-scroll table-scroll-wide">
+                    <table id="schedule-query-table">
+                        <thead><tr><th>客户 / 来源</th><th>型号</th><th>编号</th><th>起止周期</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1112,7 +1275,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.73</p>
+        <p>INTELLIGENT ASSET OS · V6.79</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1123,7 +1286,6 @@
         </div>
         <div class="auth-controls">
             <span id="auth-badge" class="auth-badge">只读模式</span>
-            <button id="auth-login-open" class="auth-btn primary viewer-only" onclick="openAuthModal()">登录 / 切换</button>
             <button id="auth-logout" class="auth-btn session-only" onclick="logoutAdmin()">退出</button>
         </div>
     </div>
@@ -1139,6 +1301,7 @@
             <label>查询跨度 (天)</label>
             <input type="number" id="query-days" value="1" min="1">
         </div>
+        <button type="button" class="query-open-btn" onclick="openScheduleQueryModal()">查询档期</button>
     </div>
     <div class="quick-metrics">
         <div class="metric-pill">
@@ -1470,6 +1633,7 @@
     let computeRevision = 0;
     let pendingDashboardFrame = null;
     let pendingChartPayload = null;
+    let dataHydrationStarted = false;
     let orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
     const inventoryListCache = new Map();
     const dateParseCache = new Map();
@@ -1631,6 +1795,7 @@
         document.documentElement.dataset.authRole = currentAuth.role;
         document.documentElement.dataset.authUser = currentAuth.authenticated ? 'session' : 'viewer';
         document.documentElement.dataset.financeAccess = canViewFinancePage() ? 'allowed' : 'denied';
+        document.documentElement.dataset.authenticated = currentAuth.authenticated ? 'true' : 'false';
         const badge = document.getElementById('auth-badge');
         if (badge) {
             if (currentAuth.role === 'admin') {
@@ -1651,6 +1816,9 @@
         }
         if (currentAuth.role === 'admin' || currentAuth.authenticated) {
             closeAuthModal();
+            hydrateDataSourcesAfterAuth().catch(err => console.warn('登录后数据同步失败', err));
+        } else {
+            dataHydrationStarted = false;
         }
     }
 
@@ -1659,18 +1827,24 @@
         const error = document.getElementById('auth-error');
         if (error) error.textContent = message;
         if (modal) modal.classList.add('active');
-        setTimeout(() => document.getElementById('auth-password')?.focus(), 40);
+        clearAuthInputs();
+        setTimeout(clearAuthInputs, 80);
+        setTimeout(() => {
+            const usernameInput = document.getElementById('auth-username');
+            const passwordInput = document.getElementById('auth-password');
+            (usernameInput?.value ? passwordInput : usernameInput)?.focus();
+        }, 100);
     }
 
     function closeAuthModal() {
         document.getElementById('auth-modal')?.classList.remove('active');
     }
 
-    function enterReadOnly() {
-        sessionStorage.setItem('sydrro_readonly_ack', '1');
-        setAuthMode('viewer', 'viewer', false);
-        closeAuthModal();
-        showToast('已进入只读模式');
+    function clearAuthInputs() {
+        const usernameInput = document.getElementById('auth-username');
+        const passwordInput = document.getElementById('auth-password');
+        if (usernameInput) usernameInput.value = '';
+        if (passwordInput) passwordInput.value = '';
     }
 
     function requireAdmin(action = '此操作') {
@@ -1684,7 +1858,7 @@
         const { showLogin = true } = options;
         if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) {
             setAuthMode('viewer', 'viewer', false);
-            if (showLogin && !sessionStorage.getItem('sydrro_readonly_ack')) openAuthModal('静态页面只能只读查看，请使用本地/服务器版本登录管理员');
+            if (showLogin) openAuthModal('请使用本地/服务器版本登录后访问');
             return currentAuth;
         }
 
@@ -1701,7 +1875,7 @@
             setAuthMode('viewer', 'viewer', false);
         }
 
-        if (showLogin && !isAdminMode() && !currentAuth.authenticated && !sessionStorage.getItem('sydrro_readonly_ack')) openAuthModal();
+        if (showLogin && !currentAuth.authenticated) openAuthModal('请先登录');
         return currentAuth;
     }
 
@@ -1720,7 +1894,6 @@
             if (!response.ok || !result.authenticated || !['admin', 'viewer'].includes(result.role)) {
                 throw new Error(result.message || '登录失败');
             }
-            sessionStorage.removeItem('sydrro_readonly_ack');
             const nextRole = result.role === 'admin' ? 'admin' : 'viewer';
             setAuthMode(nextRole, result.username || username, true, {
                 label: result.label || '',
@@ -1739,8 +1912,7 @@
             }
         } finally {
             setAuthMode('viewer', 'viewer', false);
-            sessionStorage.removeItem('sydrro_readonly_ack');
-            openAuthModal('已退出登录，可选择只读查看');
+            openAuthModal('已退出登录，请重新登录');
         }
     }
 
@@ -1975,10 +2147,22 @@
         }
     }
 
-    function bootAppShell() {
+    async function hydrateDataSourcesAfterAuth() {
+        if (!currentAuth.authenticated || dataHydrationStarted) return;
+        dataHydrationStarted = true;
         try {
             loadBrowserCacheState();
             ensureRuntimeDefaults();
+            await hydrateDataSourcesAfterBoot();
+        } catch (err) {
+            dataHydrationStarted = false;
+            throw err;
+        }
+    }
+
+    function bootAppShell() {
+        try {
+            renderModelOptions();
         } catch (err) {
             console.error('页面初始化失败', err);
         } finally {
@@ -1986,15 +2170,62 @@
         }
 
         refreshAuthSession({ showLogin: true }).catch(err => console.warn('登录状态初始化失败', err));
-        setTimeout(() => {
-            hydrateDataSourcesAfterBoot().catch(err => console.warn('后台数据同步失败', err));
-        }, 0);
     }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', bootAppShell, { once: true });
     } else {
         bootAppShell();
+    }
+
+    function getScheduleQuerySummary() {
+        const queryDate = parseDate(document.getElementById('query-date')?.value);
+        const qDays = Math.max(1, parseInt(document.getElementById('query-days')?.value, 10) || 1);
+        if (!queryDate) return '';
+        const qEnd = new Date(queryDate.getTime() + (qDays - 1) * DAY_MS);
+        return qDays === 1
+            ? `${formatDateStr(queryDate)} 当日档期`
+            : `${formatDateStr(queryDate)} ~ ${formatDateStr(qEnd)}，共 ${qDays} 天`;
+    }
+
+    function openScheduleQueryModal() {
+        if (!currentAuth.authenticated) {
+            openAuthModal('请先登录后查询档期');
+            return;
+        }
+        if (!rawData.length) {
+            showToast('暂无订单数据，登录后请等待同步完成');
+            return;
+        }
+        if (!parseDate(document.getElementById('query-date')?.value)) {
+            showToast('请输入有效的业务基准日');
+            return;
+        }
+        if (pendingDashboardFrame) {
+            cancelAnimationFrame(pendingDashboardFrame);
+            pendingDashboardFrame = null;
+        }
+        updateDashboard();
+        const sourceBody = document.querySelector('#main-table tbody');
+        const targetBody = document.querySelector('#schedule-query-table tbody');
+        const freeSource = document.getElementById('free-list');
+        const freeTarget = document.getElementById('schedule-query-free-list');
+        const freeCount = document.getElementById('count-free')?.textContent || '0';
+        const freeCountLabel = document.getElementById('schedule-query-free-count');
+        const subText = document.getElementById('schedule-query-sub');
+        if (targetBody) {
+            targetBody.innerHTML = sourceBody?.innerHTML || '<tr><td colspan="4" class="empty-row">档期空闲</td></tr>';
+        }
+        if (freeTarget) {
+            freeTarget.innerHTML = freeSource?.innerHTML || '<div class="empty-state">暂无空闲资产</div>';
+        }
+        if (freeCountLabel) freeCountLabel.textContent = `共 ${freeCount} 台空闲`;
+        if (subText) subText.textContent = getScheduleQuerySummary();
+        document.getElementById('schedule-query-modal')?.classList.add('active');
+    }
+
+    function closeScheduleQueryModal() {
+        document.getElementById('schedule-query-modal')?.classList.remove('active');
     }
 
     async function switchPage(p) {
@@ -4384,6 +4615,9 @@
     });
     document.getElementById('image-order-modal').addEventListener('click', (e) => {
         if (e.target.id === 'image-order-modal') closeImageOrderModal();
+    });
+    window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeScheduleQueryModal();
     });
     window.addEventListener('pagehide', saveAutoBackup);
     window.addEventListener('beforeunload', saveAutoBackup);
