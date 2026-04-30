@@ -2,9 +2,9 @@
 <html lang="zh-CN" data-auth-role="viewer" data-auth-user="viewer" data-finance-access="allowed" data-authenticated="false">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.79">
-    <title>SYDRRO-TECH V6.79 | 智能资产终端</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+    <meta name="app-version" content="V6.85">
+    <title>SYDRRO-TECH V6.85 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -24,7 +24,7 @@
             --glass: rgba(255, 255, 255, 0.88);
         }
 
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
         body {
             font-family: "SF Pro SC","PingFang SC","Helvetica Neue",sans-serif;
@@ -68,6 +68,14 @@
             background:rgba(0,122,255,0.08); border:1px solid rgba(0,122,255,0.14);
             color:#0068d9; font-size:11px; font-weight:900; white-space:nowrap;
         }
+
+        button,
+        input,
+        select,
+        textarea,
+        [role="button"] {
+            touch-action: manipulation;
+        }
         .school-badge.active { display:inline-flex; }
 
         .nav-toggle { background: rgba(226,232,240,0.72); padding: 4px; border-radius: 14px; display: flex; align-items: center; gap: 4px; box-shadow: inset 0 1px 2px rgba(15,23,42,0.06); border: 1px solid rgba(255,255,255,0.78); }
@@ -105,7 +113,7 @@
         html[data-authenticated="false"] header,
         html[data-authenticated="false"] .status-bar,
         html[data-authenticated="false"] .container,
-        html[data-authenticated="false"] #drop-zone {
+        html[data-authenticated="false"] #data-tools {
             visibility:hidden;
         }
         .readonly-note {
@@ -114,7 +122,7 @@
             color:#52708f; font-size:12px; font-weight:800; line-height:1.5;
         }
         html[data-auth-role="viewer"] .readonly-note { display:block; }
-        html[data-auth-role="viewer"] #drop-zone { display:none !important; }
+        html[data-auth-role="viewer"] #data-tools { display:none !important; }
         .finance-denied {
             display:none; min-height:360px; align-items:center; justify-content:center; text-align:center;
             border-radius:24px; background:rgba(255,255,255,0.82); border:1px solid rgba(226,232,240,0.9);
@@ -316,6 +324,11 @@
         .schedule-customer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 900; line-height: 1.25; }
         .schedule-customer::before { content: ""; width: 4px; height: 22px; border-radius: 999px; background: linear-gradient(180deg, #007aff, #34c759); flex: 0 0 auto; }
         .schedule-customer .customer-name { color: #151922; font-size: 14px; }
+        .order-edit-mini {
+            border: 0; border-radius: 999px; padding: 4px 9px; background: #eef4fb; color: #007aff;
+            font-size: 11px; font-weight: 900; cursor: pointer; transition: all .16s ease;
+        }
+        .order-edit-mini:hover { background: rgba(0,122,255,0.12); transform: translateY(-1px); }
         .schedule-detail-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin-top:8px; padding-left:12px; min-width:0; }
         .schedule-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-left: 12px; color: #7e8794; font-size: 11px; font-weight: 800; line-height: 1.35; min-width:0; }
         .schedule-detail-row .schedule-meta,
@@ -428,6 +441,7 @@
         .exception-item.danger .exception-type { background:rgba(255,59,48,0.10); color:#d92d20; }
         .exception-item.warn .exception-type { background:rgba(255,149,0,0.12); color:#b45309; }
         .exception-device { font-size:12px; font-weight:900; color:#007aff; white-space:nowrap; }
+        .exception-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
         .exception-main { font-size:13px; font-weight:900; color:#151922; line-height:1.45; }
         .exception-meta { margin-top:5px; font-size:11px; font-weight:800; color:#7b8798; line-height:1.45; }
         .exception-empty { min-height:88px; display:flex; align-items:center; justify-content:center; border:1px dashed #d9e2ec; border-radius:16px; color:#94a3b8; font-size:12px; font-weight:900; background:rgba(248,250,252,0.72); }
@@ -464,6 +478,59 @@
         tbody tr { transition: background 0.2s, box-shadow 0.2s; }
         tbody tr:hover { background: rgba(0,122,255,0.035); }
         .rent-val { color: var(--blue); font-weight: 800; }
+        .finance-amount { display:flex; flex-direction:column; gap:4px; align-items:flex-start; }
+        .finance-amount .gross { color:#64748b; font-size:11px; font-weight:800; }
+        .finance-amount .actual { color:var(--blue); font-size:14px; font-weight:900; }
+        .finance-amount .split-note {
+            display:inline-flex; align-items:center; width:fit-content; padding:3px 7px; border-radius:999px;
+            color:#0f766e; background:rgba(20,184,166,0.10); font-size:10px; font-weight:900;
+        }
+        .personal-finance-view { display:none; }
+        html[data-auth-role="viewer"][data-authenticated="true"] .personal-finance-view { display:block; }
+        html[data-auth-role="viewer"] .admin-finance-view { display:none !important; }
+        html[data-auth-role="admin"] .personal-finance-view { display:none !important; }
+        .personal-income-hero {
+            display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:18px; align-items:end;
+            padding:24px; border-radius:24px; margin-bottom:18px;
+            background:linear-gradient(135deg, #0f172a, #0f6fb8 54%, #22c55e);
+            color:#fff; box-shadow:0 18px 44px rgba(15,23,42,0.14); overflow:hidden; position:relative;
+        }
+        .personal-income-hero::after {
+            content:""; position:absolute; right:-52px; top:-64px; width:180px; height:180px;
+            border-radius:50%; background:rgba(255,255,255,0.14);
+        }
+        .personal-income-hero > * { position:relative; z-index:1; }
+        .personal-income-eyebrow { font-size:11px; font-weight:900; letter-spacing:0; opacity:.78; }
+        .personal-income-total { font-size:42px; font-weight:900; margin:8px 0 6px; letter-spacing:0; line-height:1; }
+        .personal-income-sub { margin:0; color:rgba(255,255,255,.78); font-size:12px; font-weight:800; line-height:1.6; }
+        .personal-income-count {
+            min-width:92px; padding:12px 14px; border-radius:18px; text-align:center;
+            background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22);
+        }
+        .personal-income-count strong { display:block; font-size:26px; line-height:1; }
+        .personal-income-count span { display:block; margin-top:5px; font-size:11px; font-weight:900; opacity:.82; }
+        .personal-income-stats { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-bottom:18px; }
+        .personal-income-stat {
+            padding:16px 18px; border-radius:18px; background:linear-gradient(180deg, #fff, #f8fafc);
+            border:1px solid #edf2f7; box-shadow:var(--shadow-soft);
+        }
+        .personal-income-stat span { display:block; color:#8b98aa; font-size:11px; font-weight:900; }
+        .personal-income-stat strong { display:block; color:var(--text-main); font-size:24px; margin-top:6px; line-height:1.1; }
+        .personal-income-list { display:flex; flex-direction:column; gap:10px; }
+        .personal-income-item {
+            display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:14px; align-items:center;
+            padding:15px 16px; border-radius:16px; border:1px solid #edf2f7;
+            background:linear-gradient(180deg, #fff, #fbfdff);
+        }
+        .personal-income-item .main { min-width:0; }
+        .personal-income-item .title { font-size:14px; font-weight:900; color:var(--text-main); line-height:1.35; }
+        .personal-income-item .meta { margin-top:5px; color:#8b98aa; font-size:11px; font-weight:800; line-height:1.45; }
+        .personal-income-item .amount { color:#0f9f51; font-size:18px; font-weight:900; white-space:nowrap; }
+        .personal-income-empty {
+            min-height:120px; display:flex; align-items:center; justify-content:center;
+            border:1px dashed #d9e2ec; border-radius:18px; color:#94a3b8; font-size:13px; font-weight:900;
+            background:rgba(248,250,252,.72);
+        }
 
         .fin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 22px; }
         .fin-stat-box { position: relative; padding: 20px 22px; border-radius: 18px; color: white; display: flex; flex-direction: column; justify-content: center; min-height: 116px; box-shadow: var(--shadow-soft); overflow: hidden; transition: .22s; }
@@ -613,7 +680,8 @@
             .fin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .inventory-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .exception-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            #drop-zone { width: 56px; height: 56px; right: 16px; bottom: 22px; }
+            #data-tools { right: 16px; bottom: 22px; }
+            .data-tool-btn { width: 56px; height: 56px; }
         }
 
         @media (max-width: 620px) {
@@ -673,14 +741,17 @@
             z-index: 1000; display: none; align-items: center; justify-content: center; 
             font-size: 24px; font-weight: 800; color: var(--blue); border: 8px dashed var(--blue); pointer-events: none; 
         }
-        #drop-zone { 
-            position: fixed; bottom: 40px; right: 40px; width: 64px; height: 64px; 
-            background: rgba(255,255,255,0.88); color: var(--blue); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; 
-            box-shadow: 0 16px 38px rgba(15,23,42,0.16); cursor: pointer; transition: 0.25s; z-index: 99;
-            border: 1px solid rgba(255,255,255,0.86); backdrop-filter: blur(16px);
+        #data-tools {
+            position: fixed; bottom: 40px; right: 40px; display: flex; gap: 10px; z-index: 99;
         }
-        #drop-zone:hover { transform: translateY(-2px) scale(1.04); background: var(--blue); color:#fff; box-shadow: 0 20px 44px rgba(0,122,255,0.22); }
+        .data-tool-btn {
+            width: 64px; height: 64px; border: 1px solid rgba(255,255,255,0.86); border-radius: 50%;
+            background: rgba(255,255,255,0.88); color: var(--blue); display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 16px 38px rgba(15,23,42,0.16); cursor: pointer; transition: 0.25s;
+            backdrop-filter: blur(16px); font-size: 12px; font-weight: 900;
+        }
+        .data-tool-btn .icon { font-size: 20px; line-height: 1; }
+        .data-tool-btn:hover { transform: translateY(-2px) scale(1.04); background: var(--blue); color:#fff; box-shadow: 0 20px 44px rgba(0,122,255,0.22); }
 
         .modal-backdrop {
             position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); z-index: 120;
@@ -715,8 +786,15 @@
         }
         .auth-field input:focus { border-color:rgba(0,122,255,.45); box-shadow:var(--ring-blue); }
         .auth-error { min-height:18px; color:#d92d20; font-size:12px; font-weight:800; }
-        .auth-actions { display:flex; gap:10px; margin-top:4px; }
-        .auth-actions .auth-btn { flex:1; height:52px; font-size:14px; border-radius:16px; }
+        .auth-actions { display:flex; gap:10px; margin-top:8px; }
+        .auth-actions .auth-btn {
+            flex:1; min-height:58px; height:58px; font-size:16px; line-height:1.2;
+            border-radius:18px; padding:0 18px; letter-spacing:0;
+        }
+        .auth-submit-btn {
+            width:100%;
+            box-shadow:0 14px 28px rgba(0,122,255,.22), inset 0 1px 0 rgba(255,255,255,.28);
+        }
         .auth-foot { margin-top:16px; padding-top:14px; border-top:1px solid #edf2f7; color:#98a2b3; font-size:11px; font-weight:800; line-height:1.6; }
         .schedule-query-panel {
             width:min(1120px, 100%); max-height:min(88vh, 920px); display:flex; flex-direction:column;
@@ -758,6 +836,7 @@
             background: linear-gradient(180deg, #fff, #f8fafc); border-radius: 18px; box-shadow: 0 28px 80px rgba(15,23,42,0.24);
             border: 1px solid rgba(255,255,255,0.85);
         }
+        .order-edit-panel { width: min(760px, 100%); }
         .modal-backdrop.active .ocr-panel { animation: panelRise .22s ease-out; }
         .ocr-panel-head {
             position: sticky; top: 0; z-index: 1; background: rgba(255,255,255,0.92); backdrop-filter: blur(14px);
@@ -783,11 +862,11 @@
         .ocr-status { min-height: 18px; margin-top: 10px; color: #64748b; font-size: 12px; font-weight: 700; }
         .ocr-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
         .ocr-form .form-field.full { grid-column: 1 / -1; }
-        .ocr-form input, .ocr-form textarea {
+        .ocr-form input, .ocr-form textarea, .ocr-form select {
             width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 11px 12px;
             font-size: 13px; color: var(--text-main); background: #fff; outline: none;
         }
-        .ocr-form input:focus, .ocr-form textarea:focus { border-color: rgba(0,122,255,.5); box-shadow: 0 0 0 3px rgba(0,122,255,.08); }
+        .ocr-form input:focus, .ocr-form textarea:focus, .ocr-form select:focus { border-color: rgba(0,122,255,.5); box-shadow: 0 0 0 3px rgba(0,122,255,.08); }
         .ocr-form textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
         .ocr-form input[readonly] { background: #f8fafc; color: #64748b; }
         .ocr-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
@@ -821,7 +900,8 @@
         }
 
         @media (max-width: 820px) {
-            #drop-zone { width: 56px; height: 56px; right: 16px; bottom: 22px; }
+            #data-tools { right: 16px; bottom: 22px; }
+            .data-tool-btn { width: 56px; height: 56px; }
             .ocr-body { grid-template-columns: 1fr; }
             .ocr-form { grid-template-columns: 1fr; }
             .exception-page-grid,
@@ -1048,11 +1128,11 @@
             #finance-table td:nth-child(2)::before { content:"客户"; }
             #finance-table td:nth-child(3)::before { content:"资产"; }
             #finance-table td:nth-child(4)::before { content:"租期"; }
-            #finance-table td:nth-child(5)::before { content:"收益"; }
+            #finance-table td:nth-child(5)::before { content:"应得/实际"; }
             #model-rank-table td:nth-child(1)::before { content:"排名"; }
             #model-rank-table td:nth-child(2)::before { content:"机型"; }
             #model-rank-table td:nth-child(3)::before { content:"在库"; }
-            #model-rank-table td:nth-child(4)::before { content:"营收"; }
+            #model-rank-table td:nth-child(4)::before { content:"实际"; }
             #model-rank-table td:nth-child(5)::before { content:"占用"; }
             #model-rank-table td:nth-child(6)::before { content:"出租"; }
             .inv-op { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1125,30 +1205,45 @@
             .inventory-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 12px; }
             .inv-summary-card { padding: 13px 14px; border-radius: 15px; }
             .inv-summary-card .value { font-size: 24px; }
+            #inventory .card-title { margin-bottom: 14px; font-size: 14px; }
+            .inventory-layout > .card { min-height: 0; }
+            .inventory-layout .inv-form { gap: 10px; }
+            .inv-form-row { gap: 9px; }
             .inv-toolbar { gap: 9px; }
             .inv-search { border-radius: 14px; padding: 11px 13px; }
 
             .exception-page-grid { gap: 12px; }
             .exception-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
             .exception-chip { padding: 10px; border-radius: 13px; }
+            .exception-chip .label { font-size: 10px; }
             .exception-chip .value { font-size: 18px; }
             .exception-list { gap: 9px; }
             .exception-item { padding: 12px; border-radius: 15px; }
+            .exception-top { gap: 7px; flex-wrap: wrap; }
+            .exception-main { font-size: 12px; line-height: 1.45; }
+            .exception-meta { font-size: 10px; line-height: 1.4; }
 
             .fin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
             .fin-stat-box { min-height: 98px; padding: 15px; border-radius: 16px; }
             .fin-stat-box .val { font-size: 24px; }
+            .personal-income-hero {
+                grid-template-columns:1fr; gap:14px; align-items:start; padding:20px; border-radius:20px;
+            }
+            .personal-income-total { font-size:34px; }
+            .personal-income-count { width:100%; display:flex; align-items:center; justify-content:space-between; text-align:left; }
+            .personal-income-count span { margin-top:0; }
+            .personal-income-stats { grid-template-columns:1fr; gap:10px; }
+            .personal-income-item { grid-template-columns:1fr; gap:8px; align-items:start; }
+            .personal-income-item .amount { font-size:17px; }
             .mini-metric-grid { gap: 8px; }
             .chart-lg, .chart-md, .chart-sm { height: 230px; }
 
-            #drop-zone {
-                width: 50px;
-                height: 50px;
-                right: 14px;
-                bottom: 18px;
-                font-size: 18px;
+            #data-tools { right: 14px; bottom: 18px; gap: 8px; }
+            .data-tool-btn {
+                width: 50px; height: 50px; font-size: 10px;
                 box-shadow: 0 12px 28px rgba(15,23,42,0.16);
             }
+            .data-tool-btn .icon { font-size: 17px; }
 
             .modal-backdrop { padding: 0; align-items: flex-end; }
             .ocr-panel {
@@ -1168,8 +1263,22 @@
             }
             .auth-title { font-size:22px; }
             .auth-sub { font-size:11px; margin-bottom:18px; }
-            .auth-actions { flex-direction:column; }
-            .auth-actions .auth-btn { height:52px; font-size:14px; }
+            .auth-actions { flex-direction:column; margin-top:10px; }
+            .auth-actions .auth-btn { min-height:58px; height:58px; font-size:16px; border-radius:18px; }
+            .auth-field input,
+            .input-box input,
+            .form-field input,
+            .form-field select,
+            .form-field textarea,
+            .ocr-form input,
+            .ocr-form textarea,
+            .ocr-batch-table input,
+            .inv-search,
+            input,
+            select,
+            textarea {
+                font-size:16px !important;
+            }
             .ocr-panel-head { padding: 16px; }
             .ocr-body { padding: 16px; }
             .ocr-actions { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(248,250,252,0), #f8fafc 24%); padding-top: 12px; }
@@ -1200,7 +1309,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.79</span>
+                <span>INTELLIGENT ASSET OS · V6.85</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1229,7 +1338,7 @@
             </div>
             <div id="auth-error" class="auth-error"></div>
             <div class="auth-actions">
-                <button type="button" class="auth-btn primary" onclick="loginAdmin()">登录</button>
+                <button type="button" class="auth-btn primary auth-submit-btn" onclick="loginAdmin()">登录</button>
             </div>
         </div>
         <div class="auth-foot">提示：未登录不会加载订单、库存和对账数据。</div>
@@ -1275,13 +1384,13 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.79</p>
+        <p>INTELLIGENT ASSET OS · V6.85</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
             <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
             <button id="btn-exception" class="nav-btn" onclick="switchPage('exceptions')">异常管理<span id="nav-exception-count" class="nav-count"></span></button>
-            <button id="btn-fin" class="nav-btn" onclick="switchPage('finance')">对账统计</button>
+            <button id="btn-fin" class="nav-btn" onclick="switchPage('finance')"><span id="finance-nav-label">对账统计</span></button>
             <button id="btn-inv" class="nav-btn" onclick="switchPage('inventory')">库存管理</button>
         </div>
         <div class="auth-controls">
@@ -1325,7 +1434,7 @@
             <div class="card">
                 <div class="card-title" id="action-card-title">🚀 实时运营指令 (今天)</div>
                 <div id="action-list">
-                    <div class="empty-state">等待数据导入...</div>
+                    <div class="empty-state">等待订单数据...</div>
                 </div>
             </div>
 
@@ -1370,16 +1479,49 @@
 
     <div id="finance" class="page">
         <div id="finance-denied" class="finance-denied">你没有权限查看此页面</div>
-        <div class="fin-kpi-grid">
+        <div id="personal-finance-view" class="personal-finance-view">
+            <div class="personal-income-hero">
+                <div>
+                    <div class="personal-income-eyebrow">我的收入</div>
+                    <div id="personal-income-total" class="personal-income-total">¥0.00</div>
+                    <p id="personal-income-sub" class="personal-income-sub">近30天收入</p>
+                </div>
+                <div class="personal-income-count">
+                    <strong id="personal-income-orders">0</strong>
+                    <span>订单</span>
+                </div>
+            </div>
+            <div class="personal-income-stats">
+                <div class="personal-income-stat">
+                    <span>近7天收入</span>
+                    <strong id="personal-income-seven">¥0.00</strong>
+                </div>
+                <div class="personal-income-stat">
+                    <span>平均每单</span>
+                    <strong id="personal-income-avg">¥0.00</strong>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-head">
+                    <div class="card-title">我的订单</div>
+                    <span id="personal-order-count" class="exception-count-badge">0</span>
+                </div>
+                <div id="personal-income-list" class="personal-income-list">
+                    <div class="personal-income-empty">暂无收入订单</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fin-kpi-grid admin-finance-view">
             <div class="fin-stat-box primary">
-                <h2 style="opacity: 1; color: #e0f0ff;">近30天总营收</h2>
+                <h2 style="opacity: 1; color: #e0f0ff;">近30天实际收入</h2>
                 <div class="val" id="kpi-30d-rev">¥0.00</div>
-                <div class="sub-text">基于当前基准日推算</div>
+                <div class="sub-text" id="kpi-30d-sub">基于当前基准日推算</div>
             </div>
             <div class="fin-stat-box secondary">
-                <h2 style="color: var(--text-secondary);">近7天营收</h2>
+                <h2 style="color: var(--text-secondary);">近7天实际收入</h2>
                 <div class="val" id="kpi-7d-rev" style="color: #34c759;">¥0.00</div>
-                <div class="sub-text">短期出单节奏</div>
+                <div class="sub-text" id="kpi-7d-sub">短期出单节奏</div>
             </div>
             <div class="fin-stat-box secondary">
                 <h2 style="color: var(--text-secondary);">近30天成单数</h2>
@@ -1389,7 +1531,7 @@
             <div class="fin-stat-box secondary">
                 <h2 style="color: var(--text-secondary);">平均客单价</h2>
                 <div class="val" id="kpi-atv">¥0.00</div>
-                <div class="sub-text">近30天平均每单金额</div>
+                <div class="sub-text" id="kpi-atv-sub">近30天平均每单金额</div>
             </div>
             <div class="fin-stat-box secondary warning">
                 <h2 style="color: var(--text-secondary);">平均出租率</h2>
@@ -1403,20 +1545,20 @@
             </div>
         </div>
 
-        <div class="fin-primary-grid">
+        <div class="fin-primary-grid admin-finance-view">
             <div class="card">
-                <div class="card-title">📈 营收趋势 (近30天流水)</div>
+                <div class="card-title">📈 实际收入趋势 (近30天)</div>
                 <div id="trendChart" class="chart-container chart-lg"></div>
             </div>
             <div class="card">
-                <div class="card-title">🏆 资产吸金力 (按机型)</div>
+                <div class="card-title">🏆 资产吸金力 (按实际收入)</div>
                 <div id="pieChart" class="chart-container chart-md"></div>
             </div>
         </div>
 
-        <div class="fin-insights-grid">
+        <div class="fin-insights-grid admin-finance-view">
             <div class="card">
-                <div class="card-title">🧭 平台维度统计 (近30天)</div>
+                <div class="card-title">🧭 平台维度统计 (按实际收入)</div>
                 <div id="platformChart" class="chart-container chart-md"></div>
             </div>
 
@@ -1448,21 +1590,21 @@
             </div>
 
             <div class="card">
-                <div class="card-title">🥇 机型收益排行 (近30天)</div>
+                <div class="card-title">🥇 机型收益排行 (按实际收入)</div>
                 <div class="table-scroll">
                     <table id="model-rank-table" class="compact-table">
-                        <thead><tr><th style="width:52px;">排名</th><th>机型</th><th>在库</th><th>营收</th><th>占用</th><th>出租率</th></tr></thead>
+                        <thead><tr><th style="width:52px;">排名</th><th>机型</th><th>在库</th><th>实际收入</th><th>占用</th><th>出租率</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card admin-finance-view">
             <div class="card-title">🧾 财务确认流水明细 (近30天)</div>
             <div class="table-scroll table-scroll-wide">
                 <table id="finance-table">
-                    <thead><tr><th>起租确认日</th><th>客户/平台</th><th>出收资产</th><th>租期</th><th>核算收益</th></tr></thead>
+                    <thead><tr><th>起租确认日</th><th>客户/平台</th><th>出收资产</th><th>租期</th><th>应得 / 实际</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -1599,7 +1741,75 @@
                 <div id="ocr-status" class="ocr-status"></div>
                 <div class="ocr-actions">
                     <button class="ocr-btn light" onclick="closeImageOrderModal()">取消</button>
-                    <button class="ocr-btn primary" onclick="saveImageOrderToXlsx()">保存订单</button>
+                    <button class="ocr-btn primary" onclick="saveImageOrderToUnifiedState()">保存订单</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="order-edit-modal" class="modal-backdrop">
+    <div class="ocr-panel order-edit-panel">
+        <div class="ocr-panel-head">
+            <div class="ocr-panel-title">编辑订单</div>
+            <button class="ocr-close" onclick="closeOrderEditModal()">×</button>
+        </div>
+        <div class="ocr-body">
+            <div>
+                <input id="order-edit-index" type="hidden">
+                <div class="ocr-form">
+                    <div class="form-field">
+                        <label>平台</label>
+                        <select id="order-edit-platform">
+                            <option value="闲鱼">闲鱼</option>
+                            <option value="微信代理">微信代理</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>姓名</label>
+                        <input id="order-edit-name">
+                    </div>
+                    <div class="form-field">
+                        <label>昵称</label>
+                        <input id="order-edit-nickname">
+                    </div>
+                    <div class="form-field">
+                        <label>联系电话</label>
+                        <input id="order-edit-phone">
+                    </div>
+                    <div class="form-field full">
+                        <label>发货地 / 地区</label>
+                        <input id="order-edit-area">
+                    </div>
+                    <div class="form-field">
+                        <label>机器</label>
+                        <input id="order-edit-model" list="ocr-model-options" placeholder="如 IXUS130">
+                    </div>
+                    <div class="form-field">
+                        <label>编号</label>
+                        <input id="order-edit-device-id" placeholder="如 1">
+                    </div>
+                    <div class="form-field">
+                        <label>起租日</label>
+                        <input id="order-edit-start-date" type="date">
+                    </div>
+                    <div class="form-field">
+                        <label>结束日</label>
+                        <input id="order-edit-end-date" type="date">
+                    </div>
+                    <div class="form-field">
+                        <label>租金</label>
+                        <input id="order-edit-rent" type="number" min="0" step="0.01">
+                    </div>
+                    <div class="form-field">
+                        <label>保存状态</label>
+                        <input id="order-edit-status" value="待保存" readonly>
+                    </div>
+                </div>
+                <div id="order-edit-message" class="ocr-status"></div>
+                <div class="ocr-actions">
+                    <button class="ocr-btn light" onclick="closeOrderEditModal()">取消</button>
+                    <button class="ocr-btn primary" onclick="saveOrderEdit()">保存修改</button>
                 </div>
             </div>
         </div>
@@ -1607,7 +1817,10 @@
 </div>
 <datalist id="ocr-model-options"></datalist>
 
-<div id="drop-zone" title="拖拽或点击导入Excel数据">📁</div>
+<div id="data-tools" class="admin-only" aria-label="数据备份工具">
+    <button id="export-xlsx-btn" class="data-tool-btn" type="button" title="导出 data.xlsx 备份"><span class="icon">⬇</span></button>
+    <button id="drop-zone" class="data-tool-btn" type="button" title="手动导入 Excel，仅用于迁移或恢复"><span class="icon">📁</span></button>
+</div>
 <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none">
 
 <script>
@@ -1634,6 +1847,7 @@
     let pendingDashboardFrame = null;
     let pendingChartPayload = null;
     let dataHydrationStarted = false;
+    let stateMutationSyncPromise = Promise.resolve();
     let orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
     const inventoryListCache = new Map();
     const dateParseCache = new Map();
@@ -1778,7 +1992,49 @@
     }
 
     function canViewFinancePage() {
-        return currentAuth.permissions?.finance !== false;
+        return Boolean(currentAuth.authenticated || isAdminMode());
+    }
+
+    function isWechatAgentPlatform(platform) {
+        return String(platform || '').trim() === '微信代理';
+    }
+
+    function formatCurrency(value) {
+        const amount = Number(value || 0);
+        return `¥${amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    function getFinanceAmountBreakdown(row, platformName = '') {
+        const gross = parseFloat(row?.['租金']) || 0;
+        const platform = platformName || row?.['平台'] || '';
+        if (isAdminMode()) {
+            const isAgent = isWechatAgentPlatform(platform);
+            return {
+                gross,
+                actual: isAgent ? gross * 0.7 : gross,
+                note: isAgent ? '微信代理 70%' : '平台全额'
+            };
+        }
+        return {
+            gross,
+            actual: gross * 0.3,
+            note: '个人分成 30%'
+        };
+    }
+
+    function shouldIncludeFinanceOrder(row) {
+        if (isAdminMode()) return true;
+        if (!currentAuth.authenticated) return false;
+        const accountName = String(currentAuth.username || '').trim();
+        const orderNickname = String(row?.['昵称'] || '').trim();
+        return Boolean(accountName && orderNickname && accountName === orderNickname);
+    }
+
+    function getFinanceScopeText(grossTotal, daysLabel) {
+        if (isAdminMode()) {
+            return `应得租金 ${formatCurrency(grossTotal)} · 微信代理按70%计`;
+        }
+        return `${daysLabel}仅统计昵称为 ${currentAuth.username} 的订单`;
     }
 
     function setAuthMode(role = 'viewer', username = 'viewer', authenticated = false, options = {}) {
@@ -1810,6 +2066,10 @@
         if (schoolBadge) {
             schoolBadge.textContent = currentAuth.label;
             schoolBadge.classList.toggle('active', Boolean(currentAuth.label));
+        }
+        const financeNavLabel = document.getElementById('finance-nav-label');
+        if (financeNavLabel) {
+            financeNavLabel.textContent = isAdminMode() ? '对账统计' : '收入';
         }
         if (isFinancePageActive() && !canViewFinancePage()) {
             pendingChartPayload = null;
@@ -2010,9 +2270,12 @@
     function applyOrderRows(rows, validation, options = {}) {
         const { sourceName = '数据文件', notify = true, seedNotify = false, persist = true } = options;
         rawData = rows;
+        migrateStatusStoresToCurrentOrderKeys();
         invalidateLocalComputeCache();
         writeJsonState(STORAGE_KEYS.assetsData, rawData);
-        seedInventoryFromOrders({ notify: seedNotify, refresh: false });
+        writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus || {});
+        writeJsonState(STORAGE_KEYS.returnStatus, returnStatus || {});
+        seedInventoryFromOrders({ notify: seedNotify, refresh: false, sync: false });
         scheduleDashboardUpdate();
         if (persist) scheduleAutoBackup();
 
@@ -2120,6 +2383,7 @@
         inventoryData = readJsonState(STORAGE_KEYS.inventoryData, []) || [];
         customModels = readJsonState(STORAGE_KEYS.customModels, []) || [];
         rawData = readJsonState(STORAGE_KEYS.assetsData, []) || [];
+        if (migrateStatusStoresToCurrentOrderKeys()) saveAllLocalState();
         invalidateLocalComputeCache();
     }
 
@@ -2137,8 +2401,8 @@
         showSyncIndicator('正在同步本地数据...');
         try {
             const hasUnifiedState = await loadAutoBackup();
-            if (!hasUnifiedState || !rawData.length) {
-                await loadLocalOrderData({ persist: true, notify: !rawData.length });
+            if (!hasUnifiedState && !rawData.length) {
+                showToast('未读取到统一数据源，可用右下角导入备份恢复');
             }
         } catch (err) {
             console.warn('后台数据同步失败', err);
@@ -2258,13 +2522,15 @@
     function importOrderFile(file) {
         if (!requireAdmin('导入订单')) return;
         if (!file) return;
+        if (!confirm('Excel 现在只作为迁移/恢复备份使用。导入会覆盖当前订单列表，但不会覆盖发货/归还状态。确认导入吗？')) {
+            return;
+        }
         const reader = new FileReader();
         reader.onload = async (ev) => {
             try {
                 const { rows, validation } = await readOrderRowsFromArrayBuffer(ev.target.result);
                 applyOrderRows(rows, validation, { sourceName: file.name || '手动导入文件', notify: true, seedNotify: false, persist: false });
                 await persistUnifiedStateNow();
-                await syncOrderWorkbookMirror().catch(err => console.warn('同步 data.xlsx 镜像失败', err));
             } catch (err) {
                 console.error(err);
                 alert(`导入失败：${err.message || '请检查 Excel 文件格式'}`);
@@ -2276,7 +2542,7 @@
     async function loadLocalOrderData(options = {}) {
         const { persist = false, notify = true } = options;
         if (location.protocol === 'file:') {
-            console.info(`自动读取 ${LOCAL_DATA_FILE} 需要通过本地服务器访问页面`);
+            console.info(`${LOCAL_DATA_FILE} 现在只作为手动导入/导出备份使用`);
             return false;
         }
 
@@ -2291,9 +2557,9 @@
             }
             return true;
         } catch (err) {
-            console.warn(`自动同步 ${LOCAL_DATA_FILE} 失败`, err);
+            console.warn(`读取 ${LOCAL_DATA_FILE} 备份失败`, err);
             if (!rawData.length) {
-                showToast(`未读取到 ${LOCAL_DATA_FILE}，可先用右下角导入`);
+                showToast(`未读取到 ${LOCAL_DATA_FILE} 备份，可先用右下角导入`);
             }
             return false;
         }
@@ -2786,11 +3052,11 @@
     }
 
     async function persistDataWorkbook(arrayBuffer) {
-        if (!requireAdmin('写入 data.xlsx')) {
+        if (!requireAdmin('导出 Excel 备份')) {
             throw new Error('当前为只读模式');
         }
         if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) {
-            throw new Error('写入 data.xlsx 需要通过本地服务打开页面');
+            throw new Error('导出 data.xlsx 备份需要通过本地服务打开页面');
         }
 
         const response = await fetch(DATA_XLSX_API_URL, {
@@ -3082,16 +3348,25 @@
         return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     }
 
-    async function syncOrderWorkbookMirror(rows = rawData) {
-        if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) return false;
-        await ensureXlsx();
-        await persistDataWorkbook(buildOrderWorkbookArrayBuffer(rows || []));
-        return true;
+    async function exportOrderWorkbookBackup(rows = rawData) {
+        if (!requireAdmin('导出 Excel 备份')) return false;
+        try {
+            if (location.protocol === 'file:' || location.hostname.endsWith('github.io')) {
+                throw new Error('导出 data.xlsx 备份需要通过本地服务打开页面');
+            }
+            await ensureXlsx();
+            await persistDataWorkbook(buildOrderWorkbookArrayBuffer(rows || []));
+            showToast('已导出 data.xlsx 备份');
+            return true;
+        } catch (err) {
+            console.error(err);
+            alert(`导出失败：${err.message || '请检查本地服务'}`);
+            return false;
+        }
     }
 
-    async function appendImageOrderRowsToXlsx(newRows) {
+    async function appendImageOrderRowsToUnifiedState(newRows) {
         if (!requireAdmin('保存订单')) throw new Error('当前为只读模式');
-        await ensureXlsx();
         if (!newRows.length) throw new Error('没有可写入的订单');
 
         const rows = normalizeImportedRows(rawData || []);
@@ -3111,11 +3386,10 @@
         const validation = validateOrderRows(nextRows);
         applyOrderRows(nextRows, validation, { sourceName: '统一数据源', notify: false, seedNotify: false, persist: false });
         await persistUnifiedStateNow();
-        await syncOrderWorkbookMirror(nextRows).catch(err => console.warn('同步 data.xlsx 镜像失败', err));
         return { addedCount: newRows.length };
     }
 
-    async function saveImageOrderToXlsx() {
+    async function saveImageOrderToUnifiedState() {
         if (!requireAdmin('保存订单')) return;
         try {
             const fields = readOcrFormFields();
@@ -3125,7 +3399,7 @@
             const newRow = buildImageOrderRow(fields);
             setOcrSaveState('写入中');
             setOcrStatus('正在保存到统一数据源...');
-            await appendImageOrderRowsToXlsx([newRow]);
+            await appendImageOrderRowsToUnifiedState([newRow]);
             setOcrSaveState('已写入');
             setOcrStatus(`已追加 ${getOrderDisplayName(newRow)} 的订单`);
             showToast('手动订单已保存');
@@ -3137,7 +3411,151 @@
         }
     }
 
-    async function saveBatchImageOrdersToXlsx() {
+    function setOrderEditField(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.value = value ?? '';
+    }
+
+    function getOrderEditField(id) {
+        return String(document.getElementById(id)?.value || '').trim();
+    }
+
+    function setOrderEditMessage(message) {
+        const el = document.getElementById('order-edit-message');
+        if (el) el.textContent = message || '';
+    }
+
+    function setOrderEditStatus(message) {
+        setOrderEditField('order-edit-status', message || '');
+    }
+
+    function orderDateValueToInput(value) {
+        const date = parseDate(value);
+        if (!date) return '';
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+
+    function dateInputToCompactOrderValue(value) {
+        const date = parseDate(value);
+        return date ? formatCompactDateStr(date) : String(value || '').trim();
+    }
+
+    function setOrderEditPlatform(value) {
+        const el = document.getElementById('order-edit-platform');
+        if (!el) return;
+        const nextValue = value || '闲鱼';
+        if (![...el.options].some(option => option.value === nextValue)) {
+            el.add(new Option(nextValue, nextValue));
+        }
+        el.value = nextValue;
+    }
+
+    function openOrderEditModal(index) {
+        if (!requireAdmin('编辑订单')) return;
+        const rowIndex = Number(index);
+        const row = rawData[rowIndex];
+        if (!row) {
+            alert('没有找到这条订单，请刷新后重试');
+            return;
+        }
+
+        setOrderEditField('order-edit-index', rowIndex);
+        setOrderEditPlatform(row['平台'] || '闲鱼');
+        setOrderEditField('order-edit-name', row['名字'] || row['姓名'] || '');
+        setOrderEditField('order-edit-nickname', row['昵称'] || '');
+        setOrderEditField('order-edit-phone', getOrderPhone(row));
+        setOrderEditField('order-edit-area', getOrderArea(row));
+        setOrderEditField('order-edit-model', row['机器'] || '');
+        setOrderEditField('order-edit-device-id', row['编号'] || '');
+        setOrderEditField('order-edit-start-date', orderDateValueToInput(row['起租日']));
+        setOrderEditField('order-edit-end-date', orderDateValueToInput(row['结束日']));
+        setOrderEditField('order-edit-rent', row['租金'] ?? '');
+        setOrderEditStatus('待保存');
+        setOrderEditMessage('');
+        document.getElementById('order-edit-modal')?.classList.add('active');
+    }
+
+    function closeOrderEditModal() {
+        document.getElementById('order-edit-modal')?.classList.remove('active');
+    }
+
+    function readOrderEditRow(oldRow = {}) {
+        const rentText = getOrderEditField('order-edit-rent');
+        const rentValue = rentText === '' ? '' : Number(rentText);
+        if (rentText !== '' && Number.isNaN(rentValue)) throw new Error('租金格式不正确');
+
+        return {
+            ...oldRow,
+            '名字': getOrderEditField('order-edit-name'),
+            '昵称': getOrderEditField('order-edit-nickname'),
+            '平台': getOrderEditField('order-edit-platform') || '闲鱼',
+            '手机号码': getOrderEditField('order-edit-phone'),
+            '地区': getOrderEditField('order-edit-area'),
+            '机器': getOrderEditField('order-edit-model'),
+            '编号': getOrderEditField('order-edit-device-id'),
+            '起租日': dateInputToCompactOrderValue(getOrderEditField('order-edit-start-date')),
+            '结束日': dateInputToCompactOrderValue(getOrderEditField('order-edit-end-date')),
+            '租金': rentValue
+        };
+    }
+
+    function validateEditedOrderRow(row, oldRow, index) {
+        const missing = REQUIRED_ORDER_FIELDS.filter(key => String(row[key] ?? '').trim() === '');
+        if (missing.length) throw new Error(`请补全：${missing.join('、')}`);
+
+        const period = getOrderPeriodFromRow(row);
+        if (!period) throw new Error('起租日/结束日不正确');
+
+        const oldDeviceKey = normalizeKey(oldRow?.['机器'], oldRow?.['编号']);
+        const newDeviceKey = normalizeKey(row?.['机器'], row?.['编号']);
+        if (newDeviceKey && newDeviceKey !== oldDeviceKey) {
+            const availabilityIssue = getDeviceAvailabilityIssue(row['机器'], row['编号']);
+            if (availabilityIssue) throw new Error(availabilityIssue);
+        }
+
+        const conflict = buildDeviceBookings(rawData.filter((_, rowIndex) => rowIndex !== index)).find(booking =>
+            booking.key === newDeviceKey && periodsOverlap(period, booking)
+        );
+        if (conflict) {
+            const conflictRow = conflict.row || {};
+            throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${getOrderDisplayName(conflictRow, '其他订单')} 占用`);
+        }
+    }
+
+    async function saveOrderEdit() {
+        if (!requireAdmin('保存订单')) return;
+        const index = Number(getOrderEditField('order-edit-index'));
+        const oldRow = rawData[index];
+        if (!oldRow) {
+            alert('没有找到这条订单，请刷新后重试');
+            return;
+        }
+
+        try {
+            setOrderEditStatus('保存中...');
+            setOrderEditMessage('正在写入统一数据源...');
+            const editedRow = readOrderEditRow(oldRow);
+            validateEditedOrderRow(editedRow, oldRow, index);
+            carryOrderStatusToEditedRow(oldRow, editedRow);
+
+            const nextRows = [...rawData];
+            nextRows[index] = editedRow;
+            const validation = validateOrderRows(nextRows);
+            applyOrderRows(nextRows, validation, { sourceName: '订单编辑', notify: false, seedNotify: false, persist: false });
+            await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
+            setOrderEditStatus('已保存');
+            setOrderEditMessage('');
+            closeOrderEditModal();
+            showToast('订单已更新');
+        } catch (err) {
+            console.error(err);
+            setOrderEditStatus('保存失败');
+            setOrderEditMessage(err.message || '保存失败');
+            alert(`保存失败：${err.message || '请检查字段'}`);
+        }
+    }
+
+    async function saveBatchImageOrdersToUnifiedState() {
         if (!requireAdmin('批量保存订单')) return;
         try {
             if (!imageOrderBatch.length) throw new Error('批量录单已取消，请逐单手动写入');
@@ -3162,7 +3580,7 @@
 
             setOcrSaveState('批量写入中');
             setOcrStatus(`正在批量写入 ${newRows.length} 单...`);
-            await appendImageOrderRowsToXlsx(newRows);
+            await appendImageOrderRowsToUnifiedState(newRows);
             imageOrderBatch.forEach(entry => { if (entry.status !== '识别失败') entry.status = '已写入'; });
             renderImageOrderBatch();
             setOcrSaveState('已批量写入');
@@ -3312,7 +3730,7 @@
         else if (models.length) select.value = models[0];
     }
 
-    function addNewModel() {
+    async function addNewModel() {
         if (!requireAdmin('新增机型')) return;
         const val = prompt('请输入新增机型名称，例如：ZV1 / GR3X / CCD200');
         if (!val) return;
@@ -3324,6 +3742,7 @@
             writeJsonState(STORAGE_KEYS.customModels, customModels);
         }
         renderModelOptions(model);
+        await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
         showToast(`已新增机型：${model}`);
     }
 
@@ -3506,7 +3925,7 @@
         renderModelOptions();
     }
 
-    function saveInventoryItem() {
+    async function saveInventoryItem() {
         if (!requireAdmin('保存库存')) return;
         const model = String(document.getElementById('inv-model').value || '').trim().toUpperCase();
         const id = String(document.getElementById('inv-id').value || '').trim();
@@ -3538,6 +3957,7 @@
         resetInventoryForm();
         renderInventoryManager();
         scheduleDashboardUpdate();
+        await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
         showToast(duplicate || editKey ? '库存已更新' : '库存已保存');
     }
 
@@ -3553,7 +3973,7 @@
         showToast('已载入设备，可修改后保存');
     }
 
-    function deleteInventoryItem(key) {
+    async function deleteInventoryItem(key) {
         if (!requireAdmin('删除库存')) return;
         const item = inventoryData.find(x => normalizeKey(x.model, x.id) === key);
         if (!item) return;
@@ -3562,15 +3982,16 @@
         saveInventoryLocal();
         renderInventoryManager();
         scheduleDashboardUpdate();
+        await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
         showToast('设备已删除');
     }
 
-    function seedInventoryFromOrders(options = {}) {
+    async function seedInventoryFromOrders(options = {}) {
         if (!isAdminMode() && options.notify !== false) {
             requireAdmin('补全库存');
             return;
         }
-        const { notify = true, refresh = true } = options;
+        const { notify = true, refresh = true, sync = true } = options;
         let added = 0;
         const seen = new Set(inventoryData.map(x => normalizeKey(x.model, x.id)));
         rawData.forEach(r => {
@@ -3586,17 +4007,108 @@
         saveInventoryLocal();
         renderInventoryManager();
         if (refresh) scheduleDashboardUpdate();
+        if (sync) await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
         if (notify) showToast(added ? `已补全 ${added} 台设备` : '没有发现新的设备');
     }
 
-    function getOrderKey(r) {
-        // 如果表格里有订单号，优先用订单号，避免同机同日重复订单串状态
-        const orderNo = r['订单号'] || r['订单编号'] || r['订单ID'] || r['订单id'];
+    function normalizeOrderStatusKeyPart(value, options = {}) {
+        const { isDate = false } = options;
+        if (isDate) {
+            const parsed = parseDate(value);
+            if (parsed) return formatCompactDateStr(parsed).toLowerCase();
+        }
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function getLegacyOrderKey(r) {
+        const orderNo = r?.['订单号'] || r?.['订单编号'] || r?.['订单ID'] || r?.['订单id'];
         if (orderNo) return `order|${String(orderNo).trim().toLowerCase()}`;
 
-        return [r['平台'], r['名字'], r['昵称'], r['机器'], r['编号'], r['起租日'], r['结束日'], r['租金']]
+        return [r?.['平台'], r?.['名字'], r?.['昵称'], r?.['机器'], r?.['编号'], r?.['起租日'], r?.['结束日'], r?.['租金']]
             .map(v => String(v || '').trim().toLowerCase())
             .join('|');
+    }
+
+    function getOrderSlotParts(r) {
+        return [
+            normalizeOrderStatusKeyPart(r?.['机器']),
+            normalizeOrderStatusKeyPart(r?.['编号']),
+            normalizeOrderStatusKeyPart(r?.['起租日'], { isDate: true }),
+            normalizeOrderStatusKeyPart(r?.['结束日'], { isDate: true })
+        ];
+    }
+
+    function getOrderSlotKey(r) {
+        const parts = getOrderSlotParts(r);
+        return parts.every(Boolean) ? `slot|${parts.join('|')}` : '';
+    }
+
+    function getOrderKey(r) {
+        const orderNo = r?.['订单号'] || r?.['订单编号'] || r?.['订单ID'] || r?.['订单id'];
+        if (orderNo) return `order|${String(orderNo).trim().toLowerCase()}`;
+        return getOrderSlotKey(r) || getLegacyOrderKey(r);
+    }
+
+    function findStatusValueForOrder(store, row) {
+        if (!store || !row) return undefined;
+        const stableKey = getOrderKey(row);
+        const legacyKey = getLegacyOrderKey(row);
+        if (stableKey && store[stableKey] !== undefined) return store[stableKey];
+        if (legacyKey && store[legacyKey] !== undefined) return store[legacyKey];
+
+        const [targetModel, targetId, targetStart, targetEnd] = getOrderSlotParts(row);
+        if (!targetModel || !targetId || !targetStart || !targetEnd) return undefined;
+        for (const [key, value] of Object.entries(store)) {
+            const parts = String(key).split('|');
+            if (parts.length >= 8
+                && parts[3] === targetModel
+                && parts[4] === targetId
+                && normalizeOrderStatusKeyPart(parts[5], { isDate: true }) === targetStart
+                && normalizeOrderStatusKeyPart(parts[6], { isDate: true }) === targetEnd) {
+                return value;
+            }
+        }
+        return undefined;
+    }
+
+    function migrateStatusStoreToStableKeys(store, rows = rawData) {
+        const nextStore = { ...(store || {}) };
+        let changed = false;
+        (rows || []).forEach(row => {
+            const stableKey = getOrderKey(row);
+            if (!stableKey || nextStore[stableKey] !== undefined) return;
+            const statusValue = findStatusValueForOrder(nextStore, row);
+            if (statusValue !== undefined) {
+                nextStore[stableKey] = statusValue;
+                changed = true;
+            }
+        });
+        return { store: nextStore, changed };
+    }
+
+    function migrateStatusStoresToCurrentOrderKeys() {
+        const migratedShipping = migrateStatusStoreToStableKeys(shippingStatus, rawData);
+        const migratedReturn = migrateStatusStoreToStableKeys(returnStatus, rawData);
+        if (migratedShipping.changed) shippingStatus = migratedShipping.store;
+        if (migratedReturn.changed) returnStatus = migratedReturn.store;
+        return migratedShipping.changed || migratedReturn.changed;
+    }
+
+    function carryOrderStatusToEditedRow(oldRow, newRow) {
+        const newKey = getOrderKey(newRow);
+        if (!newKey) return false;
+        let changed = false;
+        const shipValue = findStatusValueForOrder(shippingStatus, oldRow);
+        if (shipValue !== undefined && shippingStatus[newKey] === undefined) {
+            shippingStatus[newKey] = shipValue;
+            changed = true;
+        }
+        const returnValue = findStatusValueForOrder(returnStatus, oldRow);
+        if (returnValue !== undefined && returnStatus[newKey] === undefined) {
+            returnStatus[newKey] = returnValue;
+            changed = true;
+        }
+        return changed;
     }
 
     function formatStorageDate(date) {
@@ -3642,34 +4154,34 @@
         return day >= windowStart && day <= realToday;
     }
 
-    function setShipStatus(orderKey, status) {
+    async function setShipStatus(orderKey, status) {
         if (!requireAdmin('修改发货状态')) return;
         writeStatusRecord(shippingStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus);
         scheduleDashboardUpdate();
-        scheduleAutoBackup();
+        await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
     }
 
-    function setReturnStatus(orderKey, status) {
+    async function setReturnStatus(orderKey, status) {
         if (!requireAdmin('修改归还状态')) return;
         writeStatusRecord(returnStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.returnStatus, returnStatus);
         scheduleDashboardUpdate();
-        scheduleAutoBackup();
+        await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
     }
 
-    function setActionFilter(filterKey) {
+    async function setActionFilter(filterKey) {
         currentActionFilter = currentActionFilter === filterKey ? 'all' : normalizeActionFilter(filterKey, { allowDone: true });
         localStorage.setItem(STORAGE_KEYS.actionFilter, currentActionFilter);
         scheduleDashboardUpdate();
-        scheduleAutoBackup();
+        await syncUnifiedStateAfterMutation({ refresh: false, preserveActionView: true });
     }
 
-    function setActionDayOffset(offset) {
+    async function setActionDayOffset(offset) {
         currentActionDayOffset = normalizeActionDayOffset(offset);
         localStorage.setItem(STORAGE_KEYS.actionDayOffset, String(currentActionDayOffset));
         scheduleDashboardUpdate();
-        scheduleAutoBackup();
+        await syncUnifiedStateAfterMutation({ refresh: false, preserveActionView: true });
     }
 
     function showToast(msg) {
@@ -3707,18 +4219,23 @@
     }
 
     function applyBackupPayload(backup, options = {}) {
-        const { notify = false } = options;
+        const { notify = false, preserveActionView = false } = options;
         if (!backup || !Array.isArray(backup.rawData)) {
             throw new Error('备份文件格式不正确');
         }
 
+        const previousActionFilter = currentActionFilter;
+        const previousActionDayOffset = currentActionDayOffset;
         rawData = backup.rawData || [];
         shippingStatus = backup.shippingStatus || {};
         returnStatus = backup.returnStatus || {};
-        currentActionFilter = 'all';
-        currentActionDayOffset = normalizeActionDayOffset(backup.currentActionDayOffset);
+        currentActionFilter = preserveActionView ? previousActionFilter : 'all';
+        currentActionDayOffset = preserveActionView
+            ? normalizeActionDayOffset(previousActionDayOffset)
+            : normalizeActionDayOffset(backup.currentActionDayOffset);
         inventoryData = Array.isArray(backup.inventoryData) && backup.inventoryData.length ? backup.inventoryData : getDefaultInventory();
         customModels = Array.isArray(backup.customModels) ? backup.customModels : [];
+        migrateStatusStoresToCurrentOrderKeys();
         invalidateLocalComputeCache();
 
         saveAllLocalState();
@@ -3728,13 +4245,13 @@
         if (notify) showToast('自动备份已恢复');
     }
 
-    async function loadAutoBackup() {
+    async function loadAutoBackup(options = {}) {
         if (location.protocol === 'file:') return false;
         try {
             const response = await fetch(STATE_API_URL, { cache: 'no-store' });
             if (!response.ok) return false;
             const backup = await response.json();
-            applyBackupPayload(backup, { notify: false });
+            applyBackupPayload(backup, { notify: false, preserveActionView: Boolean(options.preserveActionView) });
             return true;
         } catch (err) {
             console.warn('自动读取统一数据源失败', err);
@@ -3757,6 +4274,31 @@
             throw new Error(message || `HTTP ${response.status}`);
         }
         return true;
+    }
+
+    async function syncUnifiedStateAfterMutation(options = {}) {
+        const { refresh = true, preserveActionView = true } = options;
+        saveAllLocalState();
+        if (!isAdminMode() || location.protocol === 'file:') return false;
+
+        const runSync = async () => {
+            await persistUnifiedStateNow();
+            if (refresh) {
+                await loadAutoBackup({ preserveActionView });
+            }
+            scheduleDashboardUpdate();
+            return true;
+        };
+
+        stateMutationSyncPromise = stateMutationSyncPromise.then(runSync, runSync);
+        try {
+            return await stateMutationSyncPromise;
+        } catch (err) {
+            console.warn('数据变更后同步统一数据源失败', err);
+            scheduleAutoBackup();
+            scheduleDashboardUpdate();
+            return false;
+        }
     }
 
     function saveAutoBackup() {
@@ -3904,7 +4446,7 @@
         return `${model} #${id}`;
     }
 
-    function addOrderException(list, type, severity, row, message, meta = '') {
+    function addOrderException(list, type, severity, row, message, meta = '', rowIndex = -1) {
         list.push({
             type,
             severity,
@@ -3912,7 +4454,8 @@
             customer: getOrderDisplayName(row),
             platform: String(row?.['平台'] || '私单').trim() || '私单',
             message,
-            meta
+            meta,
+            rowIndex
         });
     }
 
@@ -4000,26 +4543,26 @@
         const baseMeta = `${String(r['平台'] || '私单').trim() || '私单'} · ${periodText}`;
 
         if (realToday > dueDay && !isReturned) {
-            addOrderException(list, '超期未还', 'danger', r, `应于 ${formatDateStr(dueDay)} 归还，当前仍未确认`, baseMeta);
+            addOrderException(list, '超期未还', 'danger', r, `应于 ${formatDateStr(dueDay)} 归还，当前仍未确认`, baseMeta, idx);
         }
 
         if (activeOrUpcoming && !isShipped && realToday >= shippingPlan.arrivalDate) {
-            addOrderException(list, '起租前未发货', 'danger', r, `起租前一天 ${formatDateStr(shippingPlan.arrivalDate)} 已到，仍未确认发货`, baseMeta);
+            addOrderException(list, '起租前未发货', 'danger', r, `起租前一天 ${formatDateStr(shippingPlan.arrivalDate)} 已到，仍未确认发货`, baseMeta, idx);
         }
 
         const logistics = getLogisticsInfo(r);
         if (activeOrUpcoming && isShipped && logistics.trackingNo && !logistics.isSigned && realToday > shippingPlan.arrivalDate) {
             const carrierText = logistics.carrier ? `${logistics.carrier} ` : '';
-            addOrderException(list, '物流延误', 'warn', r, `${carrierText}${logistics.trackingNo} 超过预计到货日仍未签收`, `预计 ${formatDateStr(shippingPlan.arrivalDate)} 到货 · ${logistics.status || '未签收'}`);
+            addOrderException(list, '物流延误', 'warn', r, `${carrierText}${logistics.trackingNo} 超过预计到货日仍未签收`, `预计 ${formatDateStr(shippingPlan.arrivalDate)} 到货 · ${logistics.status || '未签收'}`, idx);
         }
 
         if (activeOrUpcoming && inventoryRecord && inventoryRecord.status !== 'normal') {
             const note = inventoryRecord.note ? ` · ${inventoryRecord.note}` : '';
-            addOrderException(list, '设备不可用', 'danger', r, `设备当前为「${getStatusLabel(inventoryRecord.status)}」${note}`, baseMeta);
+            addOrderException(list, '设备不可用', 'danger', r, `设备当前为「${getStatusLabel(inventoryRecord.status)}」${note}`, baseMeta, idx);
         }
 
         if (activeOrUpcoming && conflictList.length) {
-            addOrderException(list, '档期冲突', 'danger', r, `与 ${conflictList.slice(0, 2).join('、')} 冲突`, baseMeta);
+            addOrderException(list, '档期冲突', 'danger', r, `与 ${conflictList.slice(0, 2).join('、')} 冲突`, baseMeta, idx);
         }
 
         if (activeOrUpcoming) {
@@ -4028,13 +4571,13 @@
             if (String(getOrderArea(r) ?? '').trim() === '') missing.push('地区');
             if (String(getOrderPhone(r) ?? '').trim() === '') missing.push('手机号');
             if (missing.length) {
-                addOrderException(list, '信息缺失', 'warn', r, `缺少 ${missing.join('、')}`, baseMeta);
+                addOrderException(list, '信息缺失', 'warn', r, `缺少 ${missing.join('、')}`, baseMeta, idx);
             }
         }
 
         const hardTurnaroundRisks = turnaroundRisks.filter(risk => risk.mode === 'risk');
         if (activeOrUpcoming && hardTurnaroundRisks.length) {
-            addOrderException(list, '周转风险', 'danger', r, hardTurnaroundRisks[0].text, `${baseMeta} · ${hardTurnaroundRisks[0].peer}`);
+            addOrderException(list, '周转风险', 'danger', r, hardTurnaroundRisks[0].text, `${baseMeta} · ${hardTurnaroundRisks[0].peer}`, idx);
         }
     }
 
@@ -4073,21 +4616,42 @@
             (severityRank[a.severity] ?? 3) - (severityRank[b.severity] ?? 3)
             || typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type)
         );
-        const listHtml = `<div class="exception-list">${sorted.slice(0, 24).map(item => `
+        const listHtml = `<div class="exception-list">${sorted.slice(0, 24).map(item => {
+            const editButton = isAdminMode() && Number.isInteger(item.rowIndex) && item.rowIndex >= 0
+                ? `<button type="button" class="order-edit-mini admin-only" onclick="openOrderEditModal(${item.rowIndex})">编辑</button>`
+                : '';
+            return `
             <div class="exception-item ${item.severity}">
                 <div class="exception-top">
                     <span class="exception-type">${escapeHtml(item.type)}</span>
-                    <span class="exception-device">${escapeHtml(item.device)}</span>
+                    <span class="exception-right">
+                        <span class="exception-device">${escapeHtml(item.device)}</span>
+                        ${editButton}
+                    </span>
                 </div>
                 <div class="exception-main">${escapeHtml(item.customer)} · ${escapeHtml(item.message)}</div>
                 <div class="exception-meta">${escapeHtml(item.platform)} · ${escapeHtml(item.meta)}</div>
-            </div>`).join('')}</div>`;
+            </div>`;
+        }).join('')}</div>`;
         panel.innerHTML = listHtml;
+    }
+
+    function renderPersonalIncomeView({ total = 0, weekTotal = 0, orders = 0, average = 0, rowsHtml = '' } = {}) {
+        const totalEl = document.getElementById('personal-income-total');
+        if (!totalEl) return;
+        totalEl.textContent = formatCurrency(total);
+        document.getElementById('personal-income-orders').textContent = orders;
+        document.getElementById('personal-income-seven').textContent = formatCurrency(weekTotal);
+        document.getElementById('personal-income-avg').textContent = formatCurrency(average);
+        document.getElementById('personal-order-count').textContent = `${orders}单`;
+        document.getElementById('personal-income-sub').textContent = `${currentAuth.username} · 近30天收入`;
+        document.getElementById('personal-income-list').innerHTML = rowsHtml || '<div class="personal-income-empty">近30天暂无属于你的收入订单</div>';
     }
 
     function updateDashboard() {
         if (!rawData.length) {
             renderExceptionPanel([]);
+            renderPersonalIncomeView();
             return;
         }
 
@@ -4107,10 +4671,14 @@
         let mainRows = '', cShip = 0, cReturn = 0;
         let occupiedSet = new Set();
         let finRows = '';
+        let personalIncomeRows = '';
         let t7 = 0, t30 = 0, orders30d = 0;
+        let grossT7 = 0, grossT30 = 0;
         let dailyRevMap = {}, modelRevMap = {}, platformRevMap = {}, deviceRevenueMap = {};
         const financeWindowStart = new Date(qStart.getTime() - 29 * 86400000);
         financeWindowStart.setHours(0, 0, 0, 0);
+        const financeWeekStart = new Date(qStart.getTime() - 6 * 86400000);
+        financeWeekStart.setHours(0, 0, 0, 0);
 
         for(let i=0; i<30; i++) {
             let pastDay = new Date(financeWindowStart.getTime() + i * 86400000);
@@ -4141,7 +4709,6 @@
         const turnaroundRiskMap = buildTurnaroundRiskMap(normalizedRows);
 
         normalizedRows.forEach(({ r, idx, start, endDay, returnDueDay, end, prepWindow, shippingPlan }) => {
-            const rent = parseFloat(r['租金']) || 0;
             const modelName = String(r['机器'] || '未知机型').trim().toUpperCase();
             const orderKey = getOrderKey(r);
             const encodedOrderKey = encodeInlineArg(orderKey);
@@ -4170,6 +4737,7 @@
             const safeArea = escapeHtml(r['地区'] || '未知地区');
             const inventoryStatusLabel = inventoryBlocked ? escapeHtml(getStatusLabel(inventoryRecord.status)) : '';
             const inventoryNoteText = inventoryBlocked && inventoryRecord.note ? ` · ${escapeHtml(inventoryRecord.note)}` : '';
+            const includeFinanceOrder = shouldIncludeFinanceOrder(r);
             if (deviceKey && !inventoryDisplayMap[deviceKey]) {
                 inventoryDisplayMap[deviceKey] = deviceName;
                 deviceModelMap[deviceKey] = modelName;
@@ -4178,19 +4746,24 @@
             }
 
             // 财务部分：起租日落在近30天窗口内
-            if (start >= financeWindowStart && start <= qStart) {
-                t30 += rent;
+            if (includeFinanceOrder && start >= financeWindowStart && start <= qStart) {
+                const financeAmounts = getFinanceAmountBreakdown(r, platformName);
+                t30 += financeAmounts.actual;
+                grossT30 += financeAmounts.gross;
                 orders30d++;
-                if (start >= new Date(qStart.getTime() - 6 * 86400000)) t7 += rent;
+                if (start >= financeWeekStart) {
+                    t7 += financeAmounts.actual;
+                    grossT7 += financeAmounts.gross;
+                }
 
                 let dateKey = formatDateStr(start);
-                if(dailyRevMap[dateKey] !== undefined) dailyRevMap[dateKey] += rent;
-                modelRevMap[modelName] = (modelRevMap[modelName] || 0) + rent;
-                platformRevMap[platformName] = (platformRevMap[platformName] || 0) + rent;
+                if(dailyRevMap[dateKey] !== undefined) dailyRevMap[dateKey] += financeAmounts.actual;
+                modelRevMap[modelName] = (modelRevMap[modelName] || 0) + financeAmounts.actual;
+                platformRevMap[platformName] = (platformRevMap[platformName] || 0) + financeAmounts.actual;
                 if (deviceKey) {
                     deviceRevenueMap[deviceKey] = {
                         name: deviceName,
-                        value: (deviceRevenueMap[deviceKey]?.value || 0) + rent
+                        value: (deviceRevenueMap[deviceKey]?.value || 0) + financeAmounts.actual
                     };
                 }
 
@@ -4201,12 +4774,28 @@
                         <td>${platformTag} ${safeCustomer}</td>
                         <td style="color:var(--blue); font-weight:700;">${safeMachine} <span style="color:#999;font-weight:600;font-size:11px">#${safeId}</span></td>
                         <td style="color:var(--text-secondary); font-size:11px;">${safeStart} ~ ${safeEnd}</td>
-                        <td class="rent-val">+ ¥${rent.toFixed(2)}</td>
+                        <td class="rent-val">
+                            <div class="finance-amount">
+                                <span class="gross">应得 ${formatCurrency(financeAmounts.gross)}</span>
+                                <span class="actual">实际 ${formatCurrency(financeAmounts.actual)}</span>
+                                <span class="split-note">${financeAmounts.note}</span>
+                            </div>
+                        </td>
                     </tr>`;
+                if (!isAdminMode()) {
+                    personalIncomeRows += `
+                        <div class="personal-income-item">
+                            <div class="main">
+                                <div class="title">${safeMachineUpper} #${safeId} · ${safeCustomer}</div>
+                                <div class="meta">${safePlatform} · ${safeStart} ~ ${safeEnd}</div>
+                            </div>
+                            <div class="amount">${formatCurrency(financeAmounts.actual)}</div>
+                        </div>`;
+                }
             }
 
             // 资产效率：统计近30天每台设备真实占用日（按租期，不含备货天）
-            if (deviceKey && occupiedDayMap[deviceKey]) {
+            if (includeFinanceOrder && deviceKey && occupiedDayMap[deviceKey]) {
                 const overlapStart = new Date(Math.max(start.getTime(), financeWindowStart.getTime()));
                 const overlapEnd = new Date(Math.min(endDay.getTime(), qStart.getTime()));
                 if (overlapStart <= overlapEnd) {
@@ -4329,10 +4918,13 @@
                     : '';
                 let turnaroundDetail = renderTurnaroundDetail(turnaroundRisks);
                 const timelineHtml = renderScheduleTimeline(shippingPlan, start, endDay, returnDueDay);
+                const editButton = isAdminMode()
+                    ? `<button type="button" class="order-edit-mini admin-only" onclick="openOrderEditModal(${idx})">编辑</button>`
+                    : '';
 
                 mainRows += `<tr${rowClass}>
                     <td>
-                        <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}</div>
+                        <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}${editButton}</div>
                         <div class="schedule-detail-row">
                             <div class="schedule-meta"><span>${safePlatform}</span></div>
                             ${timelineHtml}
@@ -4457,21 +5049,36 @@
 
         const modelRankList = [...modelEfficiencyList].sort((a, b) => (b.revenue - a.revenue) || (b.rate - a.rate) || a.name.localeCompare(b.name));
 
-        document.getElementById('kpi-30d-rev').innerText = `¥${t30.toLocaleString()}`;
-        document.getElementById('kpi-7d-rev').innerText = `¥${t7.toLocaleString()}`;
+        document.getElementById('kpi-30d-rev').innerText = formatCurrency(t30);
+        document.getElementById('kpi-7d-rev').innerText = formatCurrency(t7);
         document.getElementById('kpi-orders').innerHTML = `${orders30d} <span style="font-size:16px;color:#999">单</span>`;
         let atv = orders30d > 0 ? (t30 / orders30d) : 0;
-        document.getElementById('kpi-atv').innerText = `¥${atv.toFixed(2)}`;
+        renderPersonalIncomeView({
+            total: t30,
+            weekTotal: t7,
+            orders: orders30d,
+            average: atv,
+            rowsHtml: personalIncomeRows
+        });
+        document.getElementById('kpi-atv').innerText = formatCurrency(atv);
+        document.getElementById('kpi-30d-sub').innerText = getFinanceScopeText(grossT30, '近30天');
+        document.getElementById('kpi-7d-sub').innerText = getFinanceScopeText(grossT7, '近7天');
+        document.getElementById('kpi-atv-sub').innerText = isAdminMode() ? '按实际收入计算平均值' : '按个人30%分成计算平均值';
         document.getElementById('kpi-utilization').innerText = `${avgUtilization.toFixed(1)}%`;
         document.getElementById('kpi-vacancy').innerText = `${avgVacancy.toFixed(1)}%`;
         document.getElementById('kpi-device-count').innerText = totalDeviceCount;
         document.getElementById('kpi-occupied-days').innerText = totalOccupiedDays;
         document.getElementById('kpi-idle-days').innerText = totalIdleDays;
         document.getElementById('kpi-avg-idle').innerText = `${avgIdlePerDevice.toFixed(1)}天`;
-        document.querySelector('#finance-table tbody').innerHTML = finRows || '<tr><td colspan="5" class="empty-row">近30天暂无结算流水</td></tr>';
+        const emptyFinanceText = isAdminMode() ? '近30天暂无结算流水' : '近30天暂无属于你的分成订单';
+        document.querySelector('#finance-table tbody').innerHTML = finRows || `<tr><td colspan="5" class="empty-row">${emptyFinanceText}</td></tr>`;
 
-        renderModelRanking(modelRankList);
-        queueChartRender(dailyRevMap, modelRevMap, platformRevMap, modelEfficiencyList);
+        if (isAdminMode()) {
+            renderModelRanking(modelRankList);
+            queueChartRender(dailyRevMap, modelRevMap, platformRevMap, modelEfficiencyList);
+        } else {
+            pendingChartPayload = null;
+        }
     }
 
     function queueChartRender(dailyMap, modelMap, platformMap, modelEfficiencyList) {
@@ -4494,7 +5101,7 @@
         const revenues = Object.values(dailyMap);
 
         const trendOption = {
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b} <br/> 营收: ¥{c}' },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b} <br/> 实际收入: ¥{c}' },
             grid: { left: '3%', right: '4%', bottom: '5%', top: '10%', containLabel: true },
             xAxis: { type: 'category', data: dates, boundaryGap: false, axisLine: { lineStyle: { color: '#e3e3e8' } }, axisLabel: { color: '#7e7e82', fontSize: 10 } },
             yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f5' } }, axisLabel: { color: '#7e7e82', fontSize: 10 } },
@@ -4529,7 +5136,7 @@
 
         const platformData = Object.keys(platformMap).map(key => ({ name: escapeHtml(key), value: platformMap[key] })).sort((a,b) => b.value - a.value);
         const platformOption = {
-            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0]?.name}<br/>营收: ¥${params[0]?.value || 0}` },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: params => `${params[0]?.name}<br/>实际收入: ¥${params[0]?.value || 0}` },
             grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
             xAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f5' } }, axisLabel: { color: '#7e7e82', fontSize: 10 } },
             yAxis: { type: 'category', data: platformData.length ? platformData.map(x => x.name) : ['暂无数据'], axisLabel: { color: '#7e7e82', fontSize: 11 } },
@@ -4606,6 +5213,9 @@
     document.getElementById('drop-zone').addEventListener('click', () => {
         document.getElementById('excel-file-input').click();
     });
+    document.getElementById('export-xlsx-btn').addEventListener('click', () => {
+        exportOrderWorkbookBackup();
+    });
     document.getElementById('excel-file-input').addEventListener('change', (e) => {
         importOrderFile(e.target.files && e.target.files[0]);
         e.target.value = '';
@@ -4616,8 +5226,14 @@
     document.getElementById('image-order-modal').addEventListener('click', (e) => {
         if (e.target.id === 'image-order-modal') closeImageOrderModal();
     });
+    document.getElementById('order-edit-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'order-edit-modal') closeOrderEditModal();
+    });
     window.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeScheduleQueryModal();
+        if (event.key === 'Escape') {
+            closeScheduleQueryModal();
+            closeOrderEditModal();
+        }
     });
     window.addEventListener('pagehide', saveAutoBackup);
     window.addEventListener('beforeunload', saveAutoBackup);
