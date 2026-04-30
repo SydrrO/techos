@@ -2,6 +2,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import base64
 from datetime import datetime, timezone
+import ipaddress
 import io
 import json
 import os
@@ -20,28 +21,61 @@ ROOT = Path(__file__).resolve().parent
 BACKUP_PATH = ROOT / "sydrro-backup.json"
 DATA_XLSX_PATH = ROOT / "data.xlsx"
 DB_PATH = ROOT / "sydrro-data.sqlite3"
-APP_HTML_FILE = "SYDRRO-TECH-V6.3.html"
+APP_HTML_FILE = "SYDRRO-TECH.html"
 STATE_RECORD_ID = "default"
 
 
-def is_port_in_use(port):
+def is_port_in_use(port, host="localhost"):
     try:
-        with socket.create_connection(("localhost", port), timeout=0.2):
+        with socket.create_connection((host, port), timeout=0.2):
             return True
     except OSError:
         return False
 
 
-def app_url(port):
-    return f"http://127.0.0.1:{port}/{APP_HTML_FILE}"
+def app_url(port, host="127.0.0.1"):
+    return f"http://{host}:{port}/{APP_HTML_FILE}"
 
 
-def existing_app_server_ready(port):
+def existing_app_server_ready(port, host="127.0.0.1"):
     try:
-        with urlopen(app_url(port), timeout=0.8) as response:
+        with urlopen(app_url(port, host), timeout=0.8) as response:
             return response.status < 500
     except (OSError, URLError):
         return False
+
+
+def get_lan_ipv4_addresses():
+    addresses = set()
+    try:
+        hostname = socket.gethostname()
+        for info in socket.getaddrinfo(hostname, None, socket.AF_INET):
+            ip = info[4][0]
+            if ip and not ip.startswith("127."):
+                addresses.add(ip)
+    except OSError:
+        pass
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("8.8.8.8", 80))
+            ip = probe.getsockname()[0]
+            if ip and not ip.startswith("127."):
+                addresses.add(ip)
+    except OSError:
+        pass
+
+    def score(ip):
+        address = ipaddress.ip_address(ip)
+        if address in ipaddress.ip_network("192.168.0.0/16"):
+            return (0, ip)
+        if address in ipaddress.ip_network("10.0.0.0/8"):
+            return (1, ip)
+        if address in ipaddress.ip_network("172.16.0.0/12"):
+            return (2, ip)
+        return (3, ip)
+
+    return sorted(addresses, key=score)
 
 
 def open_browser_url(url):
@@ -72,6 +106,7 @@ def default_state():
         "shippingStatus": {},
         "returnStatus": {},
         "currentActionFilter": "all",
+        "currentActionDayOffset": 0,
         "inventoryData": [],
         "customModels": [],
     }
@@ -93,6 +128,10 @@ def normalize_state_payload(data):
     normalized["shippingStatus"] = data.get("shippingStatus") if isinstance(data.get("shippingStatus"), dict) else {}
     normalized["returnStatus"] = data.get("returnStatus") if isinstance(data.get("returnStatus"), dict) else {}
     normalized["currentActionFilter"] = data.get("currentActionFilter") or "all"
+    try:
+        normalized["currentActionDayOffset"] = int(data.get("currentActionDayOffset") or 0)
+    except (TypeError, ValueError):
+        normalized["currentActionDayOffset"] = 0
     normalized["inventoryData"] = data.get("inventoryData") if isinstance(data.get("inventoryData"), list) else []
     normalized["customModels"] = data.get("customModels") if isinstance(data.get("customModels"), list) else []
     return normalized
@@ -278,16 +317,22 @@ class SydrroHandler(SimpleHTTPRequestHandler):
 def main():
     init_db()
     os.chdir(ROOT)
-    args = [arg for arg in sys.argv[1:] if arg != "--open"]
+    raw_args = sys.argv[1:]
+    open_browser = "--open" in raw_args
+    lan_mode = "--lan" in raw_args
+    host = "0.0.0.0" if lan_mode else "127.0.0.1"
+    args = [arg for arg in raw_args if arg not in ("--open", "--lan")]
     preferred_port = int(args[0]) if args else 8787
-    open_browser = "--open" in sys.argv[1:]
 
     if is_port_in_use(preferred_port) and existing_app_server_ready(preferred_port):
         url = f"{app_url(preferred_port)}?v=existing"
-        print(f"SYDRRO-TECH local server is already running: {url}", flush=True)
-        if open_browser:
-            open_browser_url(url)
-        return
+        if not lan_mode:
+            print(f"SYDRRO-TECH local server is already running: {url}", flush=True)
+            if open_browser:
+                open_browser_url(url)
+            return
+        print(f"Port {preferred_port} already has a local SYDRRO-TECH server.", flush=True)
+        print("A LAN server will start on the next available port.", flush=True)
 
     server = None
     port = preferred_port
@@ -295,7 +340,7 @@ def main():
         if is_port_in_use(candidate):
             continue
         try:
-            server = ThreadingHTTPServer(("127.0.0.1", candidate), SydrroHandler)
+            server = ThreadingHTTPServer((host, candidate), SydrroHandler)
             port = candidate
             break
         except OSError:
@@ -304,13 +349,22 @@ def main():
     if server is None:
         raise RuntimeError(f"No available local port from {preferred_port} to {preferred_port + 29}")
 
-    url = f"{app_url(port)}?v={os.getpid()}"
-    print(f"SYDRRO-TECH local server: {url}", flush=True)
+    local_url = f"{app_url(port)}?v={os.getpid()}"
+    print(f"SYDRRO-TECH local server: {local_url}", flush=True)
+    if lan_mode:
+        lan_urls = [f"{app_url(port, ip)}?v={os.getpid()}" for ip in get_lan_ipv4_addresses()]
+        if lan_urls:
+            print("Open this URL on your phone while connected to the same Wi-Fi:", flush=True)
+            for index, lan_url in enumerate(lan_urls):
+                tip = "  (try this first)" if index == 0 else ""
+                print(f"  {lan_url}{tip}", flush=True)
+        else:
+            print("LAN mode is enabled, but no LAN IPv4 address was detected.", flush=True)
     print(f"Unified SQLite data source: {DB_PATH}", flush=True)
     print(f"JSON mirror file: {BACKUP_PATH}", flush=True)
 
     if open_browser:
-        threading.Timer(0.6, lambda: open_browser_url(url)).start()
+        threading.Timer(0.6, lambda: open_browser_url(local_url)).start()
 
     server.serve_forever()
 

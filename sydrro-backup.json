@@ -1,7 +1,7 @@
 {
   "app": "SYDRRO-TECH",
-  "version": 2,
-  "exportedAt": "2026-04-29T13:02:23.123Z",
+  "version": 3,
+  "exportedAt": "2026-04-29T19:20:29.071017+00:00",
   "rawData": [
     {
       "名字": "大馍",
@@ -127,7 +127,10 @@
   "shippingStatus": {
     "微信代理|向原林|大馍|gr3|2|0423|0504|364": "shipped",
     "闲鱼|成淇金|xxxtentacion|ixus130|1|0501|0505|110": "shipped",
-    "闲鱼|谢蜜莲|雅加达双鱼座樱桃珊瑚|ixus130|4|0430|0504|110": "shipped",
+    "闲鱼|谢蜜莲|雅加达双鱼座樱桃珊瑚|ixus130|4|0430|0504|110": {
+      "status": "shipped",
+      "updatedAt": "2026-04-30"
+    },
     "微信代理|大馍|大馍|gr3|1|0410|0429|213": "shipped",
     "微信代理|大馍|大馍|p3|1|0410|0429|200": "shipped",
     "微信代理|杨佳树|大馍|gr3|3|0423|0506|294": "shipped",
@@ -144,7 +147,7 @@
   "returnStatus": {
     "闲鱼|邱子恒|收物前请看简介和收物须知|ixus130|4|0418|0418|35": "returned"
   },
-  "currentActionFilter": "return",
+  "currentActionFilter": "ship",
   "inventoryData": [
     {
       "model": "ixus130",

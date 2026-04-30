@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.3">
-    <title>SYDRRO-TECH V6.3 | 智能资产终端</title>
+    <meta name="app-version" content="V6.6">
+    <title>SYDRRO-TECH V6.6 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -38,6 +38,10 @@
             margin: 0;
             min-height: 100vh;
             -webkit-font-smoothing: antialiased;
+        }
+
+        html[data-device="mobile"] body {
+            -webkit-tap-highlight-color: transparent;
         }
 
         body::before {
@@ -273,6 +277,20 @@
         .table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
         .table-scroll::-webkit-scrollbar-thumb { background: #d8e0ea; border-radius: 999px; }
         .action-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+        .action-day-tabs { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:7px; margin-bottom:12px; }
+        .action-day-btn {
+            border:1px solid #edf2f7; border-radius:13px; background:linear-gradient(180deg,#fff,#f8fafc);
+            padding:8px 7px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+            color:#64748b; transition:.2s; min-width:0;
+        }
+        .action-day-btn:hover { transform:translateY(-1px); border-color:rgba(0,122,255,0.16); box-shadow:0 8px 18px rgba(15,23,42,0.06); }
+        .action-day-btn.active { background:linear-gradient(180deg, rgba(0,122,255,0.10), #fff); border-color:rgba(0,122,255,0.30); color:var(--blue); box-shadow:0 10px 22px rgba(0,122,255,0.10); }
+        .action-day-btn.has-work:not(.active) { border-color:rgba(255,149,0,0.24); background:linear-gradient(180deg, rgba(255,149,0,0.06), #fff); }
+        .action-day-label { font-size:11px; font-weight:900; line-height:1; }
+        .action-day-date { font-size:9px; font-weight:800; color:#98a2b3; line-height:1; }
+        .action-day-count { min-width:18px; height:18px; padding:0 5px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:#eef2f7; color:#64748b; font-size:10px; font-weight:900; line-height:1; }
+        .action-day-btn.has-work .action-day-count { background:rgba(255,149,0,0.14); color:#d86f00; }
+        .action-day-btn.active .action-day-count { background:rgba(0,122,255,0.14); color:var(--blue); }
         .summary-chip { background: linear-gradient(180deg, #fff, #f8fafc); border: 1px solid #edf2f7; border-radius: 14px; padding: 11px 12px; cursor: pointer; transition: 0.2s; user-select: none; }
         .summary-chip:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15,23,42,0.06); border-color: rgba(0,122,255,0.12); }
         .summary-chip.active { box-shadow: 0 10px 22px rgba(0,0,0,0.06); transform: translateY(-1px); }
@@ -661,6 +679,275 @@
             .exception-page-grid,
             .exception-list { grid-template-columns: 1fr; }
         }
+
+        @media (max-width: 720px), (pointer: coarse) and (max-width: 900px) {
+            body {
+                background:
+                    linear-gradient(180deg, #f7fbff 0%, #f1f5f9 56%, #eef3f8 100%);
+                background-attachment: scroll;
+            }
+
+            body::before { display: none; }
+
+            header {
+                padding: 12px 12px 10px;
+                gap: 10px;
+                border-bottom-color: rgba(15,23,42,0.06);
+                box-shadow: 0 8px 26px rgba(15,23,42,0.07);
+            }
+
+            .brand { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+            .brand h1 { font-size: 18px; line-height: 1; }
+            .brand p { font-size: 9px; transform: translateY(-1px); }
+            .nav-toggle {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 3px;
+                padding: 3px;
+                border-radius: 13px;
+            }
+            .nav-btn {
+                min-height: 34px;
+                padding: 8px 4px;
+                border-radius: 10px;
+                font-size: 11px;
+            }
+            .nav-count { min-width: 15px; height: 15px; padding: 0 4px; margin-left: 3px; font-size: 9px; }
+
+            .status-bar {
+                width: calc(100% - 24px);
+                margin: 12px auto;
+                padding: 12px;
+                border-radius: 18px;
+                gap: 12px;
+                box-shadow: 0 12px 34px rgba(15,23,42,0.07);
+            }
+            .control-group { gap: 10px; }
+            .input-box { gap: 5px; }
+            .input-box label { font-size: 10px; }
+            .input-box input { height: 42px; border-radius: 13px; font-size: 15px; padding: 8px 10px; }
+            .quick-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+            .metric-pill { min-width: 0; padding: 9px 10px; border-radius: 13px; }
+            .metric-pill .m-label { font-size: 9px; white-space: nowrap; }
+            .metric-pill .m-value { font-size: 18px; }
+
+            .container { padding: 0 12px 92px; }
+            .card {
+                padding: 15px;
+                border-radius: 18px;
+                box-shadow: 0 12px 34px rgba(15,23,42,0.07);
+            }
+            .card-head { margin-bottom: 14px; }
+            .card-title { font-size: 14px; margin-bottom: 14px; }
+            .card-title::after { display:none; }
+            .card-tool-btn { padding: 8px 11px; font-size: 11px; }
+
+            .grid-layout,
+            .inventory-layout,
+            .fin-primary-grid,
+            .fin-insights-grid { gap: 12px; }
+            #scheduling .grid-layout > .card,
+            .inventory-layout > .card { min-height: 0; }
+
+            .action-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+            .action-day-tabs { gap: 6px; margin-bottom: 10px; }
+            .action-day-btn { padding: 8px 4px; border-radius: 12px; }
+            .action-day-label { font-size: 10px; }
+            .summary-chip { padding: 9px 7px; border-radius: 12px; text-align:center; }
+            .summary-chip .s-label { font-size: 9px; }
+            .summary-chip .s-value { font-size: 17px; }
+            .summary-chip .s-tip { display:none; }
+            .filter-hint { margin: 0 0 10px; font-size: 10px; text-align:center; }
+
+            .action-card { padding: 12px 12px 12px 15px; border-radius: 15px; margin-bottom: 9px; }
+            .ship-topbar { margin-bottom: 7px; }
+            .action-main { font-size: 14px; }
+            .ship-plan-primary { font-size: 12px; }
+            .ship-btn { padding: 7px 10px; font-size: 10px; }
+
+            .table-scroll,
+            .table-scroll-wide,
+            #scheduling .table-scroll,
+            #scheduling .table-scroll-wide,
+            #inventory .table-scroll {
+                max-height: none;
+                overflow: visible;
+                border: 0;
+                background: transparent;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            #main-table,
+            #main-table tbody,
+            #main-table tr,
+            #main-table td,
+            #inventory-table,
+            #inventory-table tbody,
+            #inventory-table tr,
+            #inventory-table td,
+            #finance-table,
+            #finance-table tbody,
+            #finance-table tr,
+            #finance-table td,
+            #model-rank-table,
+            #model-rank-table tbody,
+            #model-rank-table tr,
+            #model-rank-table td {
+                display: block;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
+            #main-table thead,
+            #inventory-table thead,
+            #finance-table thead,
+            #model-rank-table thead { display:none; }
+
+            #main-table tbody tr,
+            #inventory-table tbody tr,
+            #finance-table tbody tr,
+            #model-rank-table tbody tr {
+                margin-bottom: 11px;
+                padding: 13px;
+                border: 1px solid #e8eef6;
+                border-radius: 17px;
+                background: linear-gradient(180deg, #fff, #f9fbfd);
+                box-shadow: 0 8px 22px rgba(15,23,42,0.055);
+            }
+
+            #main-table td,
+            #inventory-table td,
+            #finance-table td,
+            #model-rank-table td {
+                border: 0;
+                padding: 0 !important;
+                text-align: left !important;
+                font-size: 12px;
+            }
+
+            #main-table tbody tr {
+                display: grid;
+                grid-template-columns: auto auto minmax(0, 1fr);
+                gap: 8px;
+                align-items: center;
+            }
+            #main-table td:first-child { grid-column: 1 / -1; }
+            #main-table td:nth-child(2),
+            #main-table td:nth-child(3),
+            #main-table td:nth-child(4) { width: auto !important; }
+            #main-table td:nth-child(4) { justify-self: end; }
+            .schedule-customer { gap: 7px; }
+            .schedule-customer::before { height: 20px; width: 3px; }
+            .schedule-customer .customer-name { font-size: 15px; }
+            .schedule-detail-row { gap: 7px; padding-left: 9px; }
+            .schedule-meta { gap: 5px; font-size: 10px; }
+            .schedule-meta span { padding: 3px 7px; }
+            .schedule-timeline { gap: 6px; font-size: 10px; }
+            .schedule-device,
+            .schedule-id,
+            .schedule-period { font-size: 11px; border-radius: 9px; }
+            .schedule-period { white-space: normal; text-align:center; line-height:1.2; }
+            .conflict-detail,
+            .inventory-warning-detail,
+            .turnaround-risk-detail,
+            .handoff-detail { padding-left: 9px; }
+
+            #inventory-table tbody tr,
+            #finance-table tbody tr,
+            #model-rank-table tbody tr { display:block; }
+            #inventory-table td,
+            #finance-table td,
+            #model-rank-table td {
+                display: grid;
+                grid-template-columns: 76px minmax(0, 1fr);
+                gap: 10px;
+                align-items: start;
+                padding: 7px 0 !important;
+                border-bottom: 1px solid #eef3f8;
+            }
+            #inventory-table td:last-child,
+            #finance-table td:last-child,
+            #model-rank-table td:last-child { border-bottom: 0; }
+            #inventory-table td::before,
+            #finance-table td::before,
+            #model-rank-table td::before {
+                color: #8b98aa;
+                font-size: 10px;
+                font-weight: 900;
+                line-height: 1.5;
+            }
+            #inventory-table td:nth-child(1)::before { content:"机型"; }
+            #inventory-table td:nth-child(2)::before { content:"编号"; }
+            #inventory-table td:nth-child(3)::before { content:"台账"; }
+            #inventory-table td:nth-child(4)::before { content:"当前"; }
+            #inventory-table td:nth-child(5)::before { content:"下单"; }
+            #inventory-table td:nth-child(6)::before { content:"备注"; }
+            #inventory-table td:nth-child(7)::before { content:"操作"; }
+            #finance-table td:nth-child(1)::before { content:"日期"; }
+            #finance-table td:nth-child(2)::before { content:"客户"; }
+            #finance-table td:nth-child(3)::before { content:"资产"; }
+            #finance-table td:nth-child(4)::before { content:"租期"; }
+            #finance-table td:nth-child(5)::before { content:"收益"; }
+            #model-rank-table td:nth-child(1)::before { content:"排名"; }
+            #model-rank-table td:nth-child(2)::before { content:"机型"; }
+            #model-rank-table td:nth-child(3)::before { content:"在库"; }
+            #model-rank-table td:nth-child(4)::before { content:"营收"; }
+            #model-rank-table td:nth-child(5)::before { content:"占用"; }
+            #model-rank-table td:nth-child(6)::before { content:"出租"; }
+            .inv-op { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .inv-op button { width: 100%; padding: 8px 10px; }
+
+            .inventory-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 12px; }
+            .inv-summary-card { padding: 13px 14px; border-radius: 15px; }
+            .inv-summary-card .value { font-size: 24px; }
+            .inv-toolbar { gap: 9px; }
+            .inv-search { border-radius: 14px; padding: 11px 13px; }
+
+            .exception-page-grid { gap: 12px; }
+            .exception-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+            .exception-chip { padding: 10px; border-radius: 13px; }
+            .exception-chip .value { font-size: 18px; }
+            .exception-list { gap: 9px; }
+            .exception-item { padding: 12px; border-radius: 15px; }
+
+            .fin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+            .fin-stat-box { min-height: 98px; padding: 15px; border-radius: 16px; }
+            .fin-stat-box .val { font-size: 24px; }
+            .mini-metric-grid { gap: 8px; }
+            .chart-lg, .chart-md, .chart-sm { height: 230px; }
+
+            #drop-zone {
+                width: 50px;
+                height: 50px;
+                right: 14px;
+                bottom: 18px;
+                font-size: 18px;
+                box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+            }
+
+            .modal-backdrop { padding: 0; align-items: flex-end; }
+            .ocr-panel {
+                width: 100%;
+                max-height: 94dvh;
+                border-radius: 22px 22px 0 0;
+            }
+            .ocr-panel-head { padding: 16px; }
+            .ocr-body { padding: 16px; }
+            .ocr-actions { position: sticky; bottom: 0; background: linear-gradient(180deg, rgba(248,250,252,0), #f8fafc 24%); padding-top: 12px; }
+            .ocr-actions .ocr-btn { flex: 1; }
+        }
+
+        @media (max-width: 380px) {
+            .nav-toggle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .action-summary,
+            .action-day-tabs,
+            .quick-metrics,
+            .fin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .metric-pill .m-label { white-space: normal; }
+            #inventory-table td,
+            #finance-table td,
+            #model-rank-table td { grid-template-columns: 64px minmax(0, 1fr); }
+        }
     </style>
 </head>
 <body class="app-booting">
@@ -671,7 +958,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.3</span>
+                <span>INTELLIGENT ASSET OS · V6.6</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -683,7 +970,7 @@
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V6.3</p>
+        <p>INTELLIGENT ASSET OS · V6.6</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -724,7 +1011,7 @@
     <div id="scheduling" class="page active">
         <div class="grid-layout">
             <div class="card">
-                <div class="card-title">🚀 实时运营指令 (今日)</div>
+                <div class="card-title" id="action-card-title">🚀 实时运营指令 (今天)</div>
                 <div id="action-list">
                     <div class="empty-state">等待数据导入...</div>
                 </div>
@@ -1015,6 +1302,7 @@
     let inventoryData = []; // 库存管理数据
     let customModels = []; // 自定义机型选项
     let currentActionFilter = 'all'; // all / ship / overdue / return / done
+    let currentActionDayOffset = 0; // 0=today, 1=tomorrow, up to 3 days ahead
     let dragCounter = 0;
     let chartTrend = null;
     let chartPie = null;
@@ -1033,11 +1321,28 @@
     const inventoryListCache = new Map();
     const dateParseCache = new Map();
 
+    function detectClientSurface() {
+        const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        const narrowViewport = window.innerWidth <= 720;
+        return (coarsePointer || narrowViewport) ? 'mobile' : 'desktop';
+    }
+
+    function applyClientSurfaceClass() {
+        document.documentElement.dataset.device = detectClientSurface();
+    }
+
+    applyClientSurfaceClass();
+    window.addEventListener('resize', () => {
+        window.clearTimeout(applyClientSurfaceClass._timer);
+        applyClientSurfaceClass._timer = window.setTimeout(applyClientSurfaceClass, 120);
+    });
+
     const STORAGE_KEYS = {
         assetsData: 'sydrro_assets_data',
         shippingStatus: 'sydrro_shipping_status',
         returnStatus: 'sydrro_return_status',
         actionFilter: 'sydrro_action_filter',
+        actionDayOffset: 'sydrro_action_day_offset',
         inventoryData: 'sydrro_inventory_data',
         customModels: 'sydrro_custom_models'
     };
@@ -1051,6 +1356,8 @@
     const RECENT_DONE_DAYS = 3;
     const DAY_MS = 86400000;
     const TURNAROUND_RISK_DAYS = 1;
+    const ACTION_DAY_OFFSETS = [0, 1, 2, 3];
+    const ACTION_DAY_LABELS = ['今天', '明天', '后天', '大后天'];
     const ORDER_EXPORT_HEADERS = ['名字', '昵称', '平台', '手机号码', '地区', '机器', '编号', '起租日', '结束日', '租金'];
     const DEPOSIT_MODEL_MAP = {
         1000: 'IXUS130',
@@ -1238,6 +1545,47 @@
         (realToday.getMonth() + 1).toString().padStart(2, '0') + 
         realToday.getDate().toString().padStart(2, '0');
 
+    function normalizeActionDayOffset(value) {
+        const offset = Number.parseInt(value, 10);
+        return ACTION_DAY_OFFSETS.includes(offset) ? offset : 0;
+    }
+
+    function getActionDate(offset = currentActionDayOffset) {
+        const date = new Date(realToday.getTime() + normalizeActionDayOffset(offset) * DAY_MS);
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    function isSameDay(a, b) {
+        if (!(a instanceof Date) || !(b instanceof Date)) return false;
+        return a.getFullYear() === b.getFullYear()
+            && a.getMonth() === b.getMonth()
+            && a.getDate() === b.getDate();
+    }
+
+    function getActionDayLabel(offset) {
+        return ACTION_DAY_LABELS[normalizeActionDayOffset(offset)] || '今天';
+    }
+
+    function createActionBucket() {
+        return {
+            pendingShipList: [],
+            shippedList: [],
+            pendingReturnList: [],
+            overdueReturnList: [],
+            returnedList: []
+        };
+    }
+
+    function getActionBucketWorkCount(bucket) {
+        if (!bucket) return 0;
+        return bucket.pendingShipList.length + bucket.overdueReturnList.length + bucket.pendingReturnList.length;
+    }
+
+    function getDoneRecordDate(statusRecord, fallbackDate) {
+        return parseStorageDate(statusRecord?.updatedAt) || fallbackDate;
+    }
+
     function resizeCharts() {
         [chartTrend, chartPie, chartPlatform, chartUtil].forEach(c => c && c.resize());
     }
@@ -1259,6 +1607,7 @@
         returnStatus = readJsonState(STORAGE_KEYS.returnStatus, {}) || {};
         currentActionFilter = localStorage.getItem(STORAGE_KEYS.actionFilter) || 'all';
         if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
+        currentActionDayOffset = normalizeActionDayOffset(localStorage.getItem(STORAGE_KEYS.actionDayOffset));
         inventoryData = readJsonState(STORAGE_KEYS.inventoryData, []) || [];
         customModels = readJsonState(STORAGE_KEYS.customModels, []) || [];
         rawData = readJsonState(STORAGE_KEYS.assetsData, []) || [];
@@ -2698,6 +3047,12 @@
         scheduleAutoBackup();
     }
 
+    function setActionDayOffset(offset) {
+        currentActionDayOffset = normalizeActionDayOffset(offset);
+        localStorage.setItem(STORAGE_KEYS.actionDayOffset, String(currentActionDayOffset));
+        scheduleDashboardUpdate();
+        scheduleAutoBackup();
+    }
 
     function showToast(msg) {
         const toast = document.getElementById('toast');
@@ -2713,6 +3068,7 @@
         writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus || {});
         writeJsonState(STORAGE_KEYS.returnStatus, returnStatus || {});
         localStorage.setItem(STORAGE_KEYS.actionFilter, currentActionFilter || 'all');
+        localStorage.setItem(STORAGE_KEYS.actionDayOffset, String(normalizeActionDayOffset(currentActionDayOffset)));
         writeJsonState(STORAGE_KEYS.inventoryData, inventoryData || []);
         writeJsonState(STORAGE_KEYS.customModels, customModels || []);
     }
@@ -2726,6 +3082,7 @@
             shippingStatus: shippingStatus || {},
             returnStatus: returnStatus || {},
             currentActionFilter: currentActionFilter || 'all',
+            currentActionDayOffset: normalizeActionDayOffset(currentActionDayOffset),
             inventoryData: inventoryData || [],
             customModels: customModels || []
         };
@@ -2742,6 +3099,7 @@
         returnStatus = backup.returnStatus || {};
         currentActionFilter = backup.currentActionFilter || 'all';
         if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
+        currentActionDayOffset = normalizeActionDayOffset(backup.currentActionDayOffset);
         inventoryData = Array.isArray(backup.inventoryData) && backup.inventoryData.length ? backup.inventoryData : getDefaultInventory();
         customModels = Array.isArray(backup.customModels) ? backup.customModels : [];
         invalidateLocalComputeCache();
@@ -3121,7 +3479,7 @@
         const qEnd = new Date(qStart.getTime() + (qDays - 1) * 86400000);
         qEnd.setHours(23, 59, 59, 999); // 绝对 23点59分
 
-        let pendingShipList = [], shippedList = [], pendingReturnList = [], overdueReturnList = [], returnedList = [];
+        const actionBuckets = ACTION_DAY_OFFSETS.map(() => createActionBucket());
         let exceptionItems = [];
         let mainRows = '', cShip = 0, cReturn = 0;
         let occupiedSet = new Set();
@@ -3239,41 +3597,47 @@
                 }
             }
 
-            // 左侧：发货指令。进入建议发货日后，只要未确认发货，就持续提醒到订单结束。
-            if (realToday >= prepWindow && realToday <= end) {
-                const shipDateText = formatDateStr(shippingPlan.shipDate);
-                const arrivalDateText = formatDateStr(shippingPlan.arrivalDate);
-                const startDateText = formatDateStr(start);
-                const primaryShipText = shippingPlan.transitDays <= 0 ? `${arrivalDateText} 交付` : `${shipDateText} 发货`;
-                const mutedShipText = `${safeArea} · ${arrivalDateText} 前到 · ${startDateText} 起租`;
-                const nicknameLine = safeNicknamePlain ? `<div class="ship-plan-nickname">${safeNicknamePlain}</div>` : '';
-                const shipCard = `
-                    <div class="action-card ${isShipped ? 'tone-shipped' : 'tone-ship'}">
-                        <div class="ship-topbar">
-                            <span class="tag ${isShipped ? 'tag-shipped' : 'tag-ship'}">${isShipped ? '已发货' : '待发货'}</span>
-                            ${isShipped 
-                                ? `<button class="ship-btn secondary" onclick="setShipStatus(decodeURIComponent('${encodedOrderKey}'), 'pending')">改回</button>` 
-                                : `<button class="ship-btn ship" onclick="setShipStatus(decodeURIComponent('${encodedOrderKey}'), 'shipped')">确认</button>`}
-                        </div>
-                        <div class="action-main">${safeMachine} #${safeId}</div>
-                        <div class="action-meta">${safePlatform} · ${safeCustomer}</div>
-                        <div class="ship-plan">
-                            <div class="ship-plan-primary">${primaryShipText}</div>
-                            <div class="ship-plan-muted">${mutedShipText}</div>
-                            ${nicknameLine}
-                        </div>
-                    </div>`;
-                if (!isShipped) {
-                    cShip++;
-                    pendingShipList.push(shipCard);
-                } else if (isRecentDoneRecord(shipStatusRecord, prepWindow)) {
-                    shippedList.push(shipCard);
-                }
-            }
+            const shipDateText = formatDateStr(shippingPlan.shipDate);
+            const arrivalDateText = formatDateStr(shippingPlan.arrivalDate);
+            const startDateText = formatDateStr(start);
+            const primaryShipText = shippingPlan.transitDays <= 0 ? `${arrivalDateText} 交付` : `${shipDateText} 发货`;
+            const mutedShipText = `${safeArea} · ${arrivalDateText} 前到 · ${startDateText} 起租`;
+            const nicknameLine = safeNicknamePlain ? `<div class="ship-plan-nickname">${safeNicknamePlain}</div>` : '';
+            const shipCard = `
+                <div class="action-card ${isShipped ? 'tone-shipped' : 'tone-ship'}">
+                    <div class="ship-topbar">
+                        <span class="tag ${isShipped ? 'tag-shipped' : 'tag-ship'}">${isShipped ? '已发货' : '待发货'}</span>
+                        ${isShipped
+                            ? `<button class="ship-btn secondary" onclick="setShipStatus(decodeURIComponent('${encodedOrderKey}'), 'pending')">改回</button>`
+                            : `<button class="ship-btn ship" onclick="setShipStatus(decodeURIComponent('${encodedOrderKey}'), 'shipped')">确认</button>`}
+                    </div>
+                    <div class="action-main">${safeMachine} #${safeId}</div>
+                    <div class="action-meta">${safePlatform} · ${safeCustomer}</div>
+                    <div class="ship-plan">
+                        <div class="ship-plan-primary">${primaryShipText}</div>
+                        <div class="ship-plan-muted">${mutedShipText}</div>
+                        ${nicknameLine}
+                    </div>
+                </div>`;
 
-            // 左侧：归还指令。到期后未确认归还会持续提醒，逾期会标红。
-            if (realToday >= returnDueDay) {
-                const isOverdue = realToday > returnDueDay && !isReturned;
+            ACTION_DAY_OFFSETS.forEach(offset => {
+                const actionDate = getActionDate(offset);
+                const bucket = actionBuckets[offset];
+                const dueOnActionDate = isSameDay(actionDate, shippingPlan.shipDate);
+                const todayBacklog = offset === 0 && actionDate >= shippingPlan.shipDate && actionDate <= end;
+                if (!isShipped && (dueOnActionDate || todayBacklog)) {
+                    bucket.pendingShipList.push(shipCard);
+                    return;
+                }
+                const doneDate = getDoneRecordDate(shipStatusRecord, shippingPlan.shipDate);
+                if (isShipped && ((offset === 0 && isRecentDoneRecord(shipStatusRecord, shippingPlan.shipDate)) || isSameDay(doneDate, actionDate))) {
+                    bucket.shippedList.push(shipCard);
+                }
+            });
+
+            ACTION_DAY_OFFSETS.forEach(offset => {
+                const actionDate = getActionDate(offset);
+                const isOverdue = actionDate > returnDueDay && !isReturned;
                 const returnCard = `
                     <div class="action-card ${isReturned ? 'tone-returned' : (isOverdue ? 'tone-overdue' : 'tone-return')}">
                         <div class="ship-topbar">
@@ -3286,17 +3650,23 @@
                         <div class="action-meta">${safePlatform} · ${safeCustomer}</div>
                         <div class="action-sub">应还时间 ${safeReturnDue}${isOverdue ? ' · 已逾期' : ''}${safeNickname}</div>
                     </div>`;
-                if (!isReturned) cReturn++;
-                if (isReturned) {
-                    if (isRecentDoneRecord(returnStatusRecord, returnDueDay)) {
-                        returnedList.push(returnCard);
+
+                const bucket = actionBuckets[offset];
+                const dueOnActionDate = isSameDay(actionDate, returnDueDay);
+                const todayBacklog = offset === 0 && actionDate >= returnDueDay;
+                if (!isReturned && (dueOnActionDate || todayBacklog)) {
+                    if (isOverdue) {
+                        bucket.overdueReturnList.push(returnCard);
+                    } else {
+                        bucket.pendingReturnList.push(returnCard);
                     }
-                } else if (isOverdue) {
-                    overdueReturnList.push(returnCard);
-                } else {
-                    pendingReturnList.push(returnCard);
+                    return;
                 }
-            }
+                const doneDate = getDoneRecordDate(returnStatusRecord, returnDueDay);
+                if (isReturned && ((offset === 0 && isRecentDoneRecord(returnStatusRecord, returnDueDay)) || isSameDay(doneDate, actionDate))) {
+                    bucket.returnedList.push(returnCard);
+                }
+            });
 
             const conflictList = conflictMap.get(idx) || [];
             const turnaroundRisks = turnaroundRiskMap.get(idx) || [];
@@ -3361,16 +3731,33 @@
 
         renderExceptionPanel(exceptionItems);
 
+        const todayActionBucket = actionBuckets[0];
+        const selectedActionOffset = normalizeActionDayOffset(currentActionDayOffset);
+        const selectedActionDate = getActionDate(selectedActionOffset);
+        const selectedActionBucket = actionBuckets[selectedActionOffset] || createActionBucket();
+        cShip = todayActionBucket.pendingShipList.length;
+        cReturn = todayActionBucket.pendingReturnList.length + todayActionBucket.overdueReturnList.length;
         document.getElementById('count-ship').innerText = cShip;
         document.getElementById('count-return').innerText = cReturn;
+        const titleEl = document.getElementById('action-card-title');
+        if (titleEl) titleEl.innerHTML = `🚀 实时运营指令 (${getActionDayLabel(selectedActionOffset)})`;
 
+        const {
+            pendingShipList,
+            shippedList,
+            pendingReturnList,
+            overdueReturnList,
+            returnedList
+        } = selectedActionBucket;
+
+        const doneSectionLabel = selectedActionOffset === 0 ? `近${RECENT_DONE_DAYS}天` : formatDateStr(selectedActionDate);
         const sectionMap = {
             ship: pendingShipList.length ? `<div class="action-section ship"><div class="action-section-head"><div class="action-section-title">待发货</div><span class="action-section-count">${pendingShipList.length}</span></div>${pendingShipList.join('')}</div>` : '',
             overdue: overdueReturnList.length ? `<div class="action-section overdue"><div class="action-section-head"><div class="action-section-title">逾期未还</div><span class="action-section-count">${overdueReturnList.length}</span></div>${overdueReturnList.join('')}</div>` : '',
             return: pendingReturnList.length ? `<div class="action-section return"><div class="action-section-head"><div class="action-section-title">待归还</div><span class="action-section-count">${pendingReturnList.length}</span></div>${pendingReturnList.join('')}</div>` : '',
             done: [
-                shippedList.length ? `<div class="action-section shipped"><div class="action-section-head"><div class="action-section-title">已发货（近${RECENT_DONE_DAYS}天）</div><span class="action-section-count">${shippedList.length}</span></div>${shippedList.join('')}</div>` : '',
-                returnedList.length ? `<div class="action-section returned"><div class="action-section-head"><div class="action-section-title">已归还（近${RECENT_DONE_DAYS}天）</div><span class="action-section-count">${returnedList.length}</span></div>${returnedList.join('')}</div>` : ''
+                shippedList.length ? `<div class="action-section shipped"><div class="action-section-head"><div class="action-section-title">已发货（${doneSectionLabel}）</div><span class="action-section-count">${shippedList.length}</span></div>${shippedList.join('')}</div>` : '',
+                returnedList.length ? `<div class="action-section returned"><div class="action-section-head"><div class="action-section-title">已归还（${doneSectionLabel}）</div><span class="action-section-count">${returnedList.length}</span></div>${returnedList.join('')}</div>` : ''
             ].join('')
         };
 
@@ -3378,7 +3765,22 @@
             ? [sectionMap.ship, sectionMap.overdue, sectionMap.return, sectionMap.done].join('')
             : (sectionMap[currentActionFilter] || '');
 
+        const actionDayTabsHtml = `
+            <div class="action-day-tabs">
+                ${ACTION_DAY_OFFSETS.map(offset => {
+                    const bucket = actionBuckets[offset] || createActionBucket();
+                    const workCount = getActionBucketWorkCount(bucket);
+                    const isActive = selectedActionOffset === offset;
+                    return `<button type="button" class="action-day-btn ${isActive ? 'active' : ''} ${workCount ? 'has-work' : ''}" onclick="setActionDayOffset(${offset})">
+                        <span class="action-day-label">${getActionDayLabel(offset)}</span>
+                        <span class="action-day-date">${formatCompactDateStr(getActionDate(offset))}</span>
+                        <span class="action-day-count">${workCount}</span>
+                    </button>`;
+                }).join('')}
+            </div>`;
+
         const summaryHtml = `
+            ${actionDayTabsHtml}
             <div class="action-summary">
                 <div class="summary-chip ship ${currentActionFilter === 'ship' ? 'active' : ''}" onclick="setActionFilter('ship')">
                     <span class="s-label">待发货</span><span class="s-value">${pendingShipList.length}</span><span class="s-tip">点击筛选</span>
@@ -3393,7 +3795,7 @@
                     <span class="s-label">已处理</span><span class="s-value">${shippedList.length + returnedList.length}</span><span class="s-tip">近${RECENT_DONE_DAYS}天</span>
                 </div>
             </div>
-            <div class="filter-hint">当前筛选：${currentActionFilter === 'all' ? '全部' : ({ship:'待发货', overdue:'逾期未还', return:'待归还', done:'已处理（近' + RECENT_DONE_DAYS + '天）'}[currentActionFilter])}（再次点击当前卡片可取消筛选）</div>`;
+            <div class="filter-hint">当前日期：${getActionDayLabel(selectedActionOffset)} ${formatDateStr(selectedActionDate)} · 筛选：${currentActionFilter === 'all' ? '全部' : ({ship:'待发货', overdue:'逾期未还', return:'待归还', done:'已处理'}[currentActionFilter])}</div>`;
 
         document.getElementById('action-list').innerHTML = (summaryHtml + (sectionHtml || '<div class="empty-state">当前筛选下暂无单子</div>'));
 
