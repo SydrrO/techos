@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="app-version" content="V6.6">
-    <title>SYDRRO-TECH V6.6 | 智能资产终端</title>
+    <meta name="app-version" content="V6.61">
+    <title>SYDRRO-TECH V6.61 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -107,18 +107,18 @@
         body.app-booting header,
         body.app-booting .status-bar,
         body.app-booting .container {
-            opacity: 0;
-            transform: translateY(12px);
+            opacity: 1;
+            transform: none;
         }
 
         body.app-ready header,
         body.app-ready .status-bar,
         body.app-ready .container {
-            animation: appEnter .62s cubic-bezier(.2, .8, .2, 1) both;
+            animation: none;
         }
 
-        body.app-ready .status-bar { animation-delay: .08s; }
-        body.app-ready .container { animation-delay: .15s; }
+        body.app-ready .status-bar,
+        body.app-ready .container { animation-delay: 0s; }
 
         @keyframes appEnter {
             from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
@@ -585,6 +585,33 @@
         }
         .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
 
+        .sync-indicator {
+            position: fixed; top: 82px; right: 26px; z-index: 1300;
+            display: inline-flex; align-items: center; gap: 9px;
+            max-width: min(360px, calc(100vw - 32px));
+            padding: 10px 14px; border-radius: 999px;
+            background: rgba(255,255,255,0.92); color: #475467;
+            border: 1px solid rgba(226,232,240,0.94);
+            box-shadow: 0 14px 34px rgba(15,23,42,0.12);
+            font-size: 12px; font-weight: 900;
+            opacity: 0; transform: translateY(-8px); pointer-events: none;
+            transition: opacity .22s ease, transform .22s ease;
+            backdrop-filter: blur(16px);
+        }
+        .sync-indicator.active { opacity: 1; transform: translateY(0); }
+        .sync-indicator-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--blue);
+            box-shadow: 0 0 0 0 rgba(0,122,255,.28);
+            animation: syncPulse 1.2s ease-out infinite;
+            flex: 0 0 auto;
+        }
+        @keyframes syncPulse {
+            0% { box-shadow: 0 0 0 0 rgba(0,122,255,.28); }
+            70% { box-shadow: 0 0 0 9px rgba(0,122,255,0); }
+            100% { box-shadow: 0 0 0 0 rgba(0,122,255,0); }
+        }
+
         #overlay { 
             position: fixed; inset: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); 
             z-index: 1000; display: none; align-items: center; justify-content: center; 
@@ -680,7 +707,7 @@
             .exception-list { grid-template-columns: 1fr; }
         }
 
-        @media (max-width: 720px), (pointer: coarse) and (max-width: 900px) {
+        @media (pointer: coarse) and (max-width: 900px) {
             body {
                 background:
                     linear-gradient(180deg, #f7fbff 0%, #f1f5f9 56%, #eef3f8 100%);
@@ -729,6 +756,13 @@
             .metric-pill { min-width: 0; padding: 9px 10px; border-radius: 13px; }
             .metric-pill .m-label { font-size: 9px; white-space: nowrap; }
             .metric-pill .m-value { font-size: 18px; }
+            .sync-indicator {
+                top: auto;
+                right: 12px;
+                bottom: 74px;
+                max-width: calc(100vw - 24px);
+                padding: 9px 12px;
+            }
 
             .container { padding: 0 12px 92px; }
             .card {
@@ -937,7 +971,7 @@
             .ocr-actions .ocr-btn { flex: 1; }
         }
 
-        @media (max-width: 380px) {
+        @media (pointer: coarse) and (max-width: 380px) {
             .nav-toggle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .action-summary,
             .action-day-tabs,
@@ -958,7 +992,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.6</span>
+                <span>INTELLIGENT ASSET OS · V6.61</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -967,10 +1001,15 @@
 
 <div id="overlay">释放文件以同步数据</div>
 
+<div id="sync-indicator" class="sync-indicator" role="status" aria-live="polite">
+    <span class="sync-indicator-dot" aria-hidden="true"></span>
+    <span id="sync-indicator-text">正在同步数据...</span>
+</div>
+
 <header>
     <div class="brand">
         <h1>SYDRRO-TECH</h1>
-        <p>INTELLIGENT ASSET OS · V6.6</p>
+        <p>INTELLIGENT ASSET OS · V6.61</p>
     </div>
     <div class="nav-toggle">
         <button id="btn-sched" class="nav-btn active" onclick="switchPage('scheduling')">资产调度</button>
@@ -1322,9 +1361,14 @@
     const dateParseCache = new Map();
 
     function detectClientSurface() {
+        const uaDataMobile = Boolean(navigator.userAgentData && navigator.userAgentData.mobile);
+        const userAgent = navigator.userAgent || '';
+        const mobileUserAgent = /Android|iPhone|iPod|Windows Phone|Mobile/i.test(userAgent);
+        const tabletUserAgent = /iPad|Tablet/i.test(userAgent);
+        const iPadDesktopMode = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
         const coarsePointer = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-        const narrowViewport = window.innerWidth <= 720;
-        return (coarsePointer || narrowViewport) ? 'mobile' : 'desktop';
+        const compactTouchViewport = coarsePointer && window.innerWidth <= 900;
+        return (uaDataMobile || mobileUserAgent || tabletUserAgent || iPadDesktopMode || compactTouchViewport) ? 'mobile' : 'desktop';
     }
 
     function applyClientSurfaceClass() {
@@ -1349,8 +1393,8 @@
 
     const REQUIRED_ORDER_FIELDS = ['机器', '编号', '起租日', '结束日'];
     const LOCAL_DATA_FILE = 'data.xlsx';
-    const STATE_API_URL = '/api/state';
-    const DATA_XLSX_API_URL = '/api/data-xlsx';
+        const STATE_API_URL = './api/state';
+        const DATA_XLSX_API_URL = './api/data-xlsx';
     const XLSX_SCRIPT_URL = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
     const ECHARTS_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js';
     const RECENT_DONE_DAYS = 3;
@@ -1375,6 +1419,7 @@
     let echartsLoadPromise = null;
     const appBootStartedAt = performance.now();
     let appBootFinished = false;
+    let syncIndicatorTimer = null;
 
     function loadExternalScript(src) {
         return new Promise((resolve, reject) => {
@@ -1421,7 +1466,7 @@
     function finishAppBoot() {
         if (appBootFinished) return;
         appBootFinished = true;
-        const delay = Math.max(0, 420 - (performance.now() - appBootStartedAt));
+        const delay = Math.max(0, 140 - (performance.now() - appBootStartedAt));
         setTimeout(() => {
             document.body.classList.remove('app-booting');
             document.body.classList.add('app-ready');
@@ -1430,6 +1475,21 @@
             loader.classList.add('hidden');
             setTimeout(() => loader.remove(), 520);
         }, delay);
+    }
+
+    function showSyncIndicator(message = '正在同步数据...') {
+        const indicator = document.getElementById('sync-indicator');
+        const text = document.getElementById('sync-indicator-text');
+        if (!indicator) return;
+        if (text) text.textContent = message;
+        clearTimeout(syncIndicatorTimer);
+        syncIndicatorTimer = setTimeout(() => indicator.classList.add('active'), 180);
+    }
+
+    function hideSyncIndicator() {
+        const indicator = document.getElementById('sync-indicator');
+        clearTimeout(syncIndicatorTimer);
+        if (indicator) indicator.classList.remove('active');
     }
 
     function escapeHtml(value) {
@@ -1444,6 +1504,13 @@
 
     function encodeInlineArg(value) {
         return encodeURIComponent(String(value ?? '')).replace(/'/g, '%27');
+    }
+
+    function getOrderDisplayName(row, fallback = '无姓名') {
+        const nickname = String(row?.['昵称'] || '').trim();
+        const name = String(row?.['名字'] || row?.['姓名'] || '').trim();
+        if (nickname && name && nickname !== name) return `${nickname}（${name}）`;
+        return nickname || name || fallback;
     }
 
     function readJsonState(key, fallback) {
@@ -1586,6 +1653,13 @@
         return parseStorageDate(statusRecord?.updatedAt) || fallbackDate;
     }
 
+    function normalizeActionFilter(value, options = {}) {
+        const { allowDone = false } = options;
+        const filter = String(value || 'all');
+        if (!['all', 'ship', 'overdue', 'return', 'done'].includes(filter)) return 'all';
+        return filter === 'done' && !allowDone ? 'all' : filter;
+    }
+
     function resizeCharts() {
         [chartTrend, chartPie, chartPlatform, chartUtil].forEach(c => c && c.resize());
     }
@@ -1605,8 +1679,7 @@
     function loadBrowserCacheState() {
         shippingStatus = readJsonState(STORAGE_KEYS.shippingStatus, {}) || {};
         returnStatus = readJsonState(STORAGE_KEYS.returnStatus, {}) || {};
-        currentActionFilter = localStorage.getItem(STORAGE_KEYS.actionFilter) || 'all';
-        if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
+        currentActionFilter = normalizeActionFilter(localStorage.getItem(STORAGE_KEYS.actionFilter));
         currentActionDayOffset = normalizeActionDayOffset(localStorage.getItem(STORAGE_KEYS.actionDayOffset));
         inventoryData = readJsonState(STORAGE_KEYS.inventoryData, []) || [];
         customModels = readJsonState(STORAGE_KEYS.customModels, []) || [];
@@ -1621,27 +1694,43 @@
         }
         renderModelOptions();
         renderInventoryManager();
-        if (rawData.length) {
-            scheduleDashboardUpdate();
+        scheduleDashboardUpdate();
+    }
+
+    async function hydrateDataSourcesAfterBoot() {
+        showSyncIndicator('正在同步本地数据...');
+        try {
+            const hasUnifiedState = await loadAutoBackup();
+            if (!hasUnifiedState || !rawData.length) {
+                await loadLocalOrderData({ persist: true, notify: !rawData.length });
+            }
+        } catch (err) {
+            console.warn('后台数据同步失败', err);
+        } finally {
+            hideSyncIndicator();
         }
     }
 
-    window.onload = async () => {
+    function bootAppShell() {
         try {
             loadBrowserCacheState();
             ensureRuntimeDefaults();
-
-            const hasUnifiedState = await loadAutoBackup();
-            if (!hasUnifiedState || !rawData.length) {
-                loadLocalOrderData({ persist: true, notify: !rawData.length })
-                    .catch(err => console.warn('后台读取 data.xlsx 失败', err));
-            }
         } catch (err) {
             console.error('页面初始化失败', err);
         } finally {
             finishAppBoot();
         }
-    };
+
+        setTimeout(() => {
+            hydrateDataSourcesAfterBoot().catch(err => console.warn('后台数据同步失败', err));
+        }, 0);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootAppShell, { once: true });
+    } else {
+        bootAppShell();
+    }
 
     async function switchPage(p) {
         document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -2432,7 +2521,7 @@
         newRows.forEach(row => {
             const key = normalizeKey(row['机器'], row['编号']);
             const period = getOrderPeriodFromRow(row);
-            if (!key || !period) throw new Error(`${row['名字'] || '新订单'} 缺少可用编号或日期`);
+        if (!key || !period) throw new Error(`${getOrderDisplayName(row, '新订单')} 缺少可用编号或日期`);
             const availabilityIssue = getDeviceAvailabilityIssue(row['机器'], row['编号']);
             if (availabilityIssue) throw new Error(availabilityIssue);
 
@@ -2441,7 +2530,7 @@
             );
             if (conflict) {
                 const conflictRow = conflict.row || {};
-                throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${conflictRow['名字'] || '其他订单'} 占用`);
+                    throw new Error(`${row['机器']} #${row['编号']} 档期冲突：${row['起租日']}~${row['结束日']} 已被 ${getOrderDisplayName(conflictRow, '其他订单')} 占用`);
             }
             reservedRows.push(row);
         });
@@ -2531,7 +2620,7 @@
             setOcrStatus('正在保存到统一数据源...');
             await appendImageOrderRowsToXlsx([newRow]);
             setOcrSaveState('已写入');
-            setOcrStatus(`已追加 ${newRow['名字']} 的订单`);
+            setOcrStatus(`已追加 ${getOrderDisplayName(newRow)} 的订单`);
             showToast('手动订单已保存');
         } catch (err) {
             console.error(err);
@@ -2754,7 +2843,7 @@
 
     function getInventoryOrderInfo(row, start, endDay, shippingPlan, returnDueDay = getReturnDueDate(endDay)) {
         return {
-            customer: String(row?.['名字'] || '无姓名').trim() || '无姓名',
+            customer: getOrderDisplayName(row),
             platform: String(row?.['平台'] || '私单').trim() || '私单',
             area: String(row?.['地区'] || '').trim(),
             start,
@@ -3041,7 +3130,7 @@
     }
 
     function setActionFilter(filterKey) {
-        currentActionFilter = currentActionFilter === filterKey ? 'all' : filterKey;
+        currentActionFilter = currentActionFilter === filterKey ? 'all' : normalizeActionFilter(filterKey, { allowDone: true });
         localStorage.setItem(STORAGE_KEYS.actionFilter, currentActionFilter);
         scheduleDashboardUpdate();
         scheduleAutoBackup();
@@ -3097,8 +3186,7 @@
         rawData = backup.rawData || [];
         shippingStatus = backup.shippingStatus || {};
         returnStatus = backup.returnStatus || {};
-        currentActionFilter = backup.currentActionFilter || 'all';
-        if (!['all', 'ship', 'overdue', 'return', 'done'].includes(currentActionFilter)) currentActionFilter = 'all';
+        currentActionFilter = normalizeActionFilter(backup.currentActionFilter);
         currentActionDayOffset = normalizeActionDayOffset(backup.currentActionDayOffset);
         inventoryData = Array.isArray(backup.inventoryData) && backup.inventoryData.length ? backup.inventoryData : getDefaultInventory();
         customModels = Array.isArray(backup.customModels) ? backup.customModels : [];
@@ -3166,7 +3254,7 @@
     function getConflictBrief(row) {
         const orderNo = row['订单号'] || row['订单编号'] || row['订单ID'] || row['订单id'];
         const parts = [];
-        parts.push(row['名字'] || '无姓名');
+        parts.push(getOrderDisplayName(row));
         if (row['平台']) parts.push(`(${row['平台']})`);
         if (orderNo) parts.push(`单号:${orderNo}`);
         parts.push(`${row['起租日']}~${row['结束日']}`);
@@ -3286,7 +3374,7 @@
             type,
             severity,
             device: getOrderDeviceText(row),
-            customer: String(row?.['名字'] || '无姓名').trim() || '无姓名',
+            customer: getOrderDisplayName(row),
             platform: String(row?.['平台'] || '私单').trim() || '私单',
             message,
             meta
@@ -3328,14 +3416,14 @@
                     severity,
                     gapDays,
                     text: currentText,
-                    peer: `${next.r?.['名字'] || '下一单'} · ${next.r?.['平台'] || '私单'}`
+                    peer: `${getOrderDisplayName(next.r, '下一单')} · ${next.r?.['平台'] || '私单'}`
                 };
                 const nextRisk = {
                     mode,
                     severity,
                     gapDays,
                     text: nextText,
-                    peer: `${current.r?.['名字'] || '上一单'} · ${current.r?.['平台'] || '私单'}`
+                    peer: `${getOrderDisplayName(current.r, '上一单')} · ${current.r?.['平台'] || '私单'}`
                 };
                 map.set(current.idx, [...(map.get(current.idx) || []), currentRisk]);
                 map.set(next.idx, [...(map.get(next.idx) || []), nextRisk]);
@@ -3543,10 +3631,8 @@
             const safeReturnDue = escapeHtml(formatDateStr(returnDueDay));
             const safeCompactPeriod = escapeHtml(`${formatCompactDateStr(start)} ~ ${formatCompactDateStr(endDay)}`);
             const safePlatform = escapeHtml(platformName);
-            const safeCustomer = escapeHtml(r['名字'] || '无姓名');
-            const safeNicknamePlain = escapeHtml(r['昵称'] || '');
+            const safeCustomer = escapeHtml(getOrderDisplayName(r));
             const safeArea = escapeHtml(r['地区'] || '未知地区');
-            const safeNickname = r['昵称'] ? ` · ${escapeHtml(r['昵称'])}` : '';
             const inventoryStatusLabel = inventoryBlocked ? escapeHtml(getStatusLabel(inventoryRecord.status)) : '';
             const inventoryNoteText = inventoryBlocked && inventoryRecord.note ? ` · ${escapeHtml(inventoryRecord.note)}` : '';
             if (deviceKey && !inventoryDisplayMap[deviceKey]) {
@@ -3602,7 +3688,6 @@
             const startDateText = formatDateStr(start);
             const primaryShipText = shippingPlan.transitDays <= 0 ? `${arrivalDateText} 交付` : `${shipDateText} 发货`;
             const mutedShipText = `${safeArea} · ${arrivalDateText} 前到 · ${startDateText} 起租`;
-            const nicknameLine = safeNicknamePlain ? `<div class="ship-plan-nickname">${safeNicknamePlain}</div>` : '';
             const shipCard = `
                 <div class="action-card ${isShipped ? 'tone-shipped' : 'tone-ship'}">
                     <div class="ship-topbar">
@@ -3616,7 +3701,6 @@
                     <div class="ship-plan">
                         <div class="ship-plan-primary">${primaryShipText}</div>
                         <div class="ship-plan-muted">${mutedShipText}</div>
-                        ${nicknameLine}
                     </div>
                 </div>`;
 
@@ -3648,7 +3732,7 @@
                         </div>
                         <div class="action-main">${safeMachine} #${safeId}</div>
                         <div class="action-meta">${safePlatform} · ${safeCustomer}</div>
-                        <div class="action-sub">应还时间 ${safeReturnDue}${isOverdue ? ' · 已逾期' : ''}${safeNickname}</div>
+                        <div class="action-sub">应还时间 ${safeReturnDue}${isOverdue ? ' · 已逾期' : ''}</div>
                     </div>`;
 
                 const bucket = actionBuckets[offset];
@@ -3715,7 +3799,7 @@
                     <td>
                         <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}</div>
                         <div class="schedule-detail-row">
-                            <div class="schedule-meta"><span>${safePlatform}</span>${safeNicknamePlain ? `<span class="schedule-note">${safeNicknamePlain}</span>` : ''}</div>
+                            <div class="schedule-meta"><span>${safePlatform}</span></div>
                             ${timelineHtml}
                         </div>
                         ${inventoryWarningDetail}
@@ -3761,8 +3845,9 @@
             ].join('')
         };
 
+        const pendingSectionHtml = [sectionMap.ship, sectionMap.overdue, sectionMap.return].join('');
         const sectionHtml = currentActionFilter === 'all'
-            ? [sectionMap.ship, sectionMap.overdue, sectionMap.return, sectionMap.done].join('')
+            ? pendingSectionHtml
             : (sectionMap[currentActionFilter] || '');
 
         const actionDayTabsHtml = `
@@ -3795,9 +3880,12 @@
                     <span class="s-label">已处理</span><span class="s-value">${shippedList.length + returnedList.length}</span><span class="s-tip">近${RECENT_DONE_DAYS}天</span>
                 </div>
             </div>
-            <div class="filter-hint">当前日期：${getActionDayLabel(selectedActionOffset)} ${formatDateStr(selectedActionDate)} · 筛选：${currentActionFilter === 'all' ? '全部' : ({ship:'待发货', overdue:'逾期未还', return:'待归还', done:'已处理'}[currentActionFilter])}</div>`;
+            <div class="filter-hint">当前日期：${getActionDayLabel(selectedActionOffset)} ${formatDateStr(selectedActionDate)} · 筛选：${currentActionFilter === 'all' ? '未处理' : ({ship:'待发货', overdue:'逾期未还', return:'待归还', done:'已处理'}[currentActionFilter])}</div>`;
 
-        document.getElementById('action-list').innerHTML = (summaryHtml + (sectionHtml || '<div class="empty-state">当前筛选下暂无单子</div>'));
+        const emptyActionText = currentActionFilter === 'all'
+            ? '当前暂无未处理订单，可点击已处理查看记录'
+            : '当前筛选下暂无单子';
+        document.getElementById('action-list').innerHTML = (summaryHtml + (sectionHtml || `<div class="empty-state">${emptyActionText}</div>`));
 
         // 渲染表格，如果 mainRows 真的为空，才会显示“档期空闲”
         document.querySelector('#main-table tbody').innerHTML = mainRows || '<tr><td colspan="4" class="empty-row">档期空闲</td></tr>';

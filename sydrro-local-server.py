@@ -1,5 +1,6 @@
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
+from socketserver import TCPServer, ThreadingMixIn
 import base64
 from datetime import datetime, timezone
 import ipaddress
@@ -15,6 +16,16 @@ from urllib.error import URLError
 from urllib.request import urlopen
 import webbrowser
 import zipfile
+
+
+class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
+    daemon_threads = True
+
+    def server_bind(self):
+        TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
 
 
 ROOT = Path(__file__).resolve().parent
@@ -138,7 +149,7 @@ def normalize_state_payload(data):
 
 
 def connect_db():
-    return sqlite3.connect(DB_PATH, timeout=10)
+    return sqlite3.connect(str(DB_PATH), timeout=10)
 
 
 def init_db():
@@ -156,7 +167,7 @@ def init_db():
 
 
 def write_backup_mirror(state):
-    fd, tmp_name = tempfile.mkstemp(prefix="sydrro-backup-", suffix=".json", dir=ROOT)
+    fd, tmp_name = tempfile.mkstemp(prefix="sydrro-backup-", suffix=".json", dir=str(ROOT))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(state, fh, ensure_ascii=False, indent=2)
@@ -278,7 +289,7 @@ class SydrroHandler(SimpleHTTPRequestHandler):
             self.send_error(400, f"Invalid workbook payload: {exc}")
             return
 
-        fd, tmp_name = tempfile.mkstemp(prefix="data-", suffix=".xlsx", dir=ROOT)
+        fd, tmp_name = tempfile.mkstemp(prefix="data-", suffix=".xlsx", dir=str(ROOT))
         try:
             with os.fdopen(fd, "wb") as fh:
                 fh.write(workbook_bytes)
