@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.94">
-    <title>SYDRRO-TECH V6.94 | 智能资产终端</title>
+    <meta name="app-version" content="V6.95">
+    <title>SYDRRO-TECH V6.95 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1319,7 +1319,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.94</span>
+                <span>INTELLIGENT ASSET OS · V6.95</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1395,7 +1395,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.94</p>
+        <p>INTELLIGENT ASSET OS · V6.95</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1858,7 +1858,7 @@
     let pendingChartPayload = null;
     let dataHydrationStarted = false;
     let stateMutationSyncPromise = Promise.resolve();
-    let orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
+    let orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: null, turnaroundRiskMap: null };
     const inventoryListCache = new Map();
     const dateParseCache = new Map();
 
@@ -2294,10 +2294,11 @@
         localStorage.setItem(key, JSON.stringify(value));
     }
 
-    function invalidateLocalComputeCache() {
+    function invalidateLocalComputeCache(options = {}) {
+        const { inventory = true } = options;
         computeRevision++;
-        orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: new Map() };
-        inventoryListCache.clear();
+        orderAnalysisCache = { revision: -1, normalizedRows: [], conflictMap: null, turnaroundRiskMap: null };
+        if (inventory) inventoryListCache.clear();
     }
 
     function isFinancePageActive() {
@@ -3886,30 +3887,29 @@
         return allInv;
     }
 
-    function getInventoryOrderInfo(row, start, endDay, shippingPlan, returnDueDay = getReturnDueDate(endDay)) {
+    function getInventoryOrderInfo(item) {
+        const row = item?.r || item || {};
         return {
-            customer: getOrderDisplayName(row),
-            platform: String(row?.['平台'] || '私单').trim() || '私单',
-            area: String(row?.['地区'] || '').trim(),
-            start,
-            endDay,
-            returnDueDay,
-            shippingPlan,
-            orderKey: getOrderKey(row)
+            customer: item?.customerName || getOrderDisplayName(row),
+            platform: item?.platformName || String(row?.['平台'] || '私单').trim() || '私单',
+            area: item?.areaText || String(row?.['地区'] || '').trim(),
+            start: item?.start,
+            endDay: item?.endDay,
+            returnDueDay: item?.returnDueDay || getReturnDueDate(item?.endDay),
+            shippingPlan: item?.shippingPlan,
+            orderKey: item?.orderKey || getOrderKey(row)
         };
     }
 
     function getInventoryScheduleMap() {
         const map = new Map();
         const { normalizedRows } = getNormalizedOrderAnalysis();
-        normalizedRows.forEach(({ r, start, endDay, returnDueDay, prepWindow, shippingPlan }) => {
-            const key = normalizeKey(r['机器'], r['编号']);
+        normalizedRows.forEach(item => {
+            const { deviceKey: key, start, returnDueDay, prepWindow } = item;
             if (!key) return;
+            if (item.isReturned) return;
 
-            const info = getInventoryOrderInfo(r, start, endDay, shippingPlan, returnDueDay);
-            const returnRecord = readStatusRecord(returnStatus, info.orderKey);
-            if (returnRecord.status === 'returned') return;
-
+            const info = getInventoryOrderInfo(item);
             const bucket = map.get(key) || { current: null, next: null };
             if (realToday >= start && realToday <= returnDueDay) {
                 bucket.current = { ...info, phase: 'busy' };
@@ -3978,10 +3978,14 @@
         const tbody = document.querySelector('#inventory-table tbody');
         if (!tbody) return;
 
-        inventoryData = inventoryData.map(normalizeInventoryItem).filter(x => x.model && x.id);
+        const normalizedInventory = inventoryData
+            .map(normalizeInventoryItem)
+            .filter(x => x.model && x.id)
+            .map(item => ({ ...item, key: normalizeKey(item.model, item.id) }));
+        inventoryData = normalizedInventory.map(({ key, ...item }) => item);
         const scheduleMap = getInventoryScheduleMap();
-        const filtered = inventoryData.filter(item => {
-            const itemSchedule = scheduleMap.get(normalizeKey(item.model, item.id));
+        const filtered = normalizedInventory.filter(item => {
+            const itemSchedule = scheduleMap.get(item.key);
             const haystack = [item.model, item.id, getStatusLabel(item.status), item.buyDate, item.price, item.note, getInventoryScheduleSearchText(itemSchedule)].join(' ').toLowerCase();
             return !q || haystack.includes(q);
         }).sort((a,b) => a.model.localeCompare(b.model) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
@@ -4000,8 +4004,8 @@
         setText('inv-lost', counts.lost || 0);
 
         tbody.innerHTML = filtered.map(item => {
-            const key = encodeInlineArg(normalizeKey(item.model, item.id));
-            const itemSchedule = scheduleMap.get(normalizeKey(item.model, item.id));
+            const key = encodeInlineArg(item.key);
+            const itemSchedule = scheduleMap.get(item.key);
             const model = escapeHtml(String(item.model).toUpperCase());
             const id = escapeHtml(item.id);
             const note = item.note ? escapeHtml(item.note) : '-';
@@ -4265,6 +4269,7 @@
         if (!requireAdmin('修改发货状态')) return;
         writeStatusRecord(shippingStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.shippingStatus, shippingStatus);
+        invalidateLocalComputeCache({ inventory: false });
         scheduleDashboardUpdate();
         await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
     }
@@ -4273,6 +4278,7 @@
         if (!requireAdmin('修改归还状态')) return;
         writeStatusRecord(returnStatus, orderKey, status);
         writeJsonState(STORAGE_KEYS.returnStatus, returnStatus);
+        invalidateLocalComputeCache({ inventory: false });
         scheduleDashboardUpdate();
         await syncUnifiedStateAfterMutation({ refresh: true, preserveActionView: true });
     }
@@ -4448,8 +4454,8 @@
     function buildConflictMap(normalizedRows) {
         const conflictMap = new Map();
         const rowsByDevice = normalizedRows.reduce((map, row) => {
-            if (readStatusRecord(returnStatus, getOrderKey(row.r)).status === 'returned') return map;
-            const key = normalizeKey(row.r['机器'], row.r['编号']);
+            if (row.isReturned) return map;
+            const key = row.deviceKey;
             if (!key) return map;
             (map[key] = map[key] || []).push(row);
             return map;
@@ -4518,16 +4524,67 @@
             const end = new Date(rawEnd); end.setHours(23, 59, 59, 999);
             const shippingPlan = getShippingPlan(r, start);
             const prepWindow = new Date(shippingPlan.shipDate);
+            const orderKey = getOrderKey(r);
+            const shipStatusRecord = readStatusRecord(shippingStatus, orderKey);
+            const returnStatusRecord = readStatusRecord(returnStatus, orderKey);
+            const returnedAt = parseStorageDate(returnStatusRecord.updatedAt);
+            if (returnedAt) returnedAt.setHours(0, 0, 0, 0);
+            const modelName = String(r['机器'] || '未知机型').trim().toUpperCase();
+            const idText = String(r['编号'] || '-').trim();
+            const deviceKey = normalizeKey(r['机器'], r['编号']);
+            const deviceName = r['机器'] && r['编号'] ? `${modelName} #${idText}` : '未知设备';
+            const platformName = String(r['平台'] || '私单').trim() || '私单';
+            const areaText = String(r['地区'] || '未知地区').trim() || '未知地区';
 
-            normalizedRows.push({ r, idx, start, endDay, returnDueDay, end, prepWindow, shippingPlan });
+            normalizedRows.push({
+                r,
+                idx,
+                start,
+                endDay,
+                returnDueDay,
+                end,
+                prepWindow,
+                shippingPlan,
+                orderKey,
+                encodedOrderKey: encodeInlineArg(orderKey),
+                shipStatusRecord,
+                returnStatusRecord,
+                isShipped: shipStatusRecord.status === 'shipped',
+                isReturned: returnStatusRecord.status === 'returned',
+                returnedAt,
+                deviceKey,
+                deviceName,
+                modelName,
+                platformName,
+                customerName: getOrderDisplayName(r),
+                areaText,
+                includeFinanceOrder: shouldIncludeFinanceOrder(r)
+            });
         });
 
         orderAnalysisCache = {
             revision: computeRevision,
             normalizedRows,
-            conflictMap: buildConflictMap(normalizedRows)
+            conflictMap: null,
+            turnaroundRiskMap: null
         };
         return orderAnalysisCache;
+    }
+
+    function getCachedConflictMap() {
+        const analysis = getNormalizedOrderAnalysis();
+        if (!analysis.conflictMap) {
+            analysis.conflictMap = buildConflictMap(analysis.normalizedRows);
+        }
+        return analysis.conflictMap;
+    }
+
+    function getCachedTurnaroundRiskMap() {
+        const analysis = getNormalizedOrderAnalysis();
+        if (!analysis.turnaroundRiskMap) {
+            analysis.turnaroundRiskMap = buildTurnaroundRiskMap(analysis.normalizedRows);
+        }
+        return analysis.turnaroundRiskMap;
     }
 
     function getOrderPhone(row) {
@@ -4570,8 +4627,8 @@
         const map = new Map();
         const groups = new Map();
         normalizedRows.forEach(item => {
-            if (readStatusRecord(returnStatus, getOrderKey(item.r)).status === 'returned') return;
-            const key = normalizeKey(item.r?.['机器'], item.r?.['编号']);
+            if (item.isReturned) return;
+            const key = item.deviceKey;
             if (!key) return;
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(item);
@@ -4601,14 +4658,14 @@
                     severity,
                     gapDays,
                     text: currentText,
-                    peer: `${getOrderDisplayName(next.r, '下一单')} · ${next.r?.['平台'] || '私单'}`
+                    peer: `${next.customerName || getOrderDisplayName(next.r, '下一单')} · ${next.platformName || next.r?.['平台'] || '私单'}`
                 };
                 const nextRisk = {
                     mode,
                     severity,
                     gapDays,
                     text: nextText,
-                    peer: `${getOrderDisplayName(current.r, '上一单')} · ${current.r?.['平台'] || '私单'}`
+                    peer: `${current.customerName || getOrderDisplayName(current.r, '上一单')} · ${current.platformName || current.r?.['平台'] || '私单'}`
                 };
                 map.set(current.idx, [...(map.get(current.idx) || []), currentRisk]);
                 map.set(next.idx, [...(map.get(next.idx) || []), nextRisk]);
@@ -4826,24 +4883,35 @@
             occupiedDayMap[key] = new Set();
         });
 
-        const { normalizedRows, conflictMap } = getNormalizedOrderAnalysis();
-        const turnaroundRiskMap = buildTurnaroundRiskMap(normalizedRows);
+        const { normalizedRows } = getNormalizedOrderAnalysis();
+        const conflictMap = getCachedConflictMap();
+        const turnaroundRiskMap = getCachedTurnaroundRiskMap();
 
-        normalizedRows.forEach(({ r, idx, start, endDay, returnDueDay, end, prepWindow, shippingPlan }) => {
-            const modelName = String(r['机器'] || '未知机型').trim().toUpperCase();
-            const orderKey = getOrderKey(r);
-            const encodedOrderKey = encodeInlineArg(orderKey);
-            const shipStatusRecord = readStatusRecord(shippingStatus, orderKey);
-            const isShipped = shipStatusRecord.status === 'shipped';
-            const returnStatusRecord = readStatusRecord(returnStatus, orderKey);
-            const isReturned = returnStatusRecord.status === 'returned';
-            const returnedAt = parseStorageDate(returnStatusRecord.updatedAt);
-            if (returnedAt) returnedAt.setHours(0, 0, 0, 0);
+        normalizedRows.forEach(({
+            r,
+            idx,
+            start,
+            endDay,
+            returnDueDay,
+            end,
+            prepWindow,
+            shippingPlan,
+            encodedOrderKey,
+            shipStatusRecord,
+            returnStatusRecord,
+            isShipped,
+            isReturned,
+            returnedAt,
+            deviceKey,
+            deviceName,
+            modelName,
+            platformName,
+            customerName,
+            areaText,
+            includeFinanceOrder
+        }) => {
             const releasedForQuery = Boolean(isReturned && returnedAt && qStart >= returnedAt);
 
-            const deviceKey = normalizeKey(r['机器'], r['编号']);
-            const deviceName = r['机器'] && r['编号'] ? `${String(r['机器']).trim().toUpperCase()} #${String(r['编号']).trim()}` : '未知设备';
-            const platformName = String(r['平台'] || '私单').trim() || '私单';
             const inventoryRecord = deviceKey ? inventoryStatusMap.get(deviceKey) : null;
             const inventoryBlocked = Boolean(inventoryRecord && inventoryRecord.status !== 'normal');
             const safeMachine = escapeHtml(r['机器'] || '未知机型');
@@ -4854,11 +4922,10 @@
             const safeReturnDue = escapeHtml(formatDateStr(returnDueDay));
             const safeCompactPeriod = escapeHtml(`${formatCompactDateStr(start)} ~ ${formatCompactDateStr(endDay)}`);
             const safePlatform = escapeHtml(platformName);
-            const safeCustomer = escapeHtml(getOrderDisplayName(r));
-            const safeArea = escapeHtml(r['地区'] || '未知地区');
+            const safeCustomer = escapeHtml(customerName);
+            const safeArea = escapeHtml(areaText);
             const inventoryStatusLabel = inventoryBlocked ? escapeHtml(getStatusLabel(inventoryRecord.status)) : '';
             const inventoryNoteText = inventoryBlocked && inventoryRecord.note ? ` · ${escapeHtml(inventoryRecord.note)}` : '';
-            const includeFinanceOrder = shouldIncludeFinanceOrder(r);
             if (deviceKey && !inventoryDisplayMap[deviceKey]) {
                 inventoryDisplayMap[deviceKey] = deviceName;
                 deviceModelMap[deviceKey] = modelName;
@@ -5010,8 +5077,8 @@
             if (qStart <= returnEnd && qEnd >= prepWindow && !releasedForQuery) {
 
                 // 1. 在右侧把这台机器锁死，不再显示为 READY
-                if (r['机器'] && r['编号']) {
-                    occupiedSet.add(normalizeKey(r['机器'], r['编号']));
+                if (deviceKey) {
+                    occupiedSet.add(deviceKey);
                 }
 
                 // 2. 在中间档期表强行把它渲染出来
