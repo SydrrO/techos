@@ -1,7 +1,7 @@
 {
   "app": "SYDRRO-TECH",
   "version": 3,
-  "exportedAt": "2026-04-30T10:30:44.429162+00:00",
+  "exportedAt": "2026-05-04T18:57:12.563761+00:00",
   "rawData": [
     {
       "名字": "大馍",
@@ -100,10 +100,10 @@
       "租金": 75
     },
     {
-      "名字": "x",
+      "名字": "陈怡",
       "昵称": "又活了一天呢",
       "平台": "闲鱼",
-      "手机号码": "x",
+      "手机号码": "13701472509",
       "地区": "北京省",
       "机器": "ixus130",
       "编号": "2",
@@ -121,6 +121,30 @@
       "编号": "1",
       "起租日": "0501",
       "结束日": "0505",
+      "租金": 110
+    },
+    {
+      "名字": "大馍室友",
+      "昵称": "damo",
+      "平台": "微信代理",
+      "手机号码": "无",
+      "地区": "江苏省",
+      "机器": "GR3",
+      "编号": "1",
+      "起租日": "2026-05-01",
+      "结束日": "2026-05-05",
+      "租金": 218
+    },
+    {
+      "名字": "大馍室友",
+      "昵称": "damo",
+      "平台": "闲鱼",
+      "手机号码": "无",
+      "地区": "江苏省",
+      "机器": "P3",
+      "编号": "1",
+      "起租日": "2026-05-01",
+      "结束日": "2026-05-05",
       "租金": 110
     }
   ],
@@ -170,14 +194,42 @@
     "slot|gr3|3|0423|0506": "shipped",
     "slot|ixus130|2|0501|0503": "shipped",
     "slot|ixus130|4|0430|0504": "shipped",
-    "slot|ixus130|1|0501|0505": "shipped"
+    "slot|ixus130|1|0501|0505": "shipped",
+    "slot|ixus130|3|0503|0505": {
+      "status": "shipped",
+      "updatedAt": "2026-05-01"
+    },
+    "slot|gr3|1|0501|0505": {
+      "status": "shipped",
+      "updatedAt": "2026-05-03"
+    },
+    "slot|p3|1|0501|0505": {
+      "status": "shipped",
+      "updatedAt": "2026-05-03"
+    },
+    "slot|ixus130|2|0507|0510": {
+      "status": "shipped",
+      "updatedAt": "2026-05-04"
+    }
   },
   "returnStatus": {
     "闲鱼|邱子恒|收物前请看简介和收物须知|ixus130|4|0418|0418|35": "returned",
-    "slot|ixus130|4|0418|0418": "returned"
+    "slot|ixus130|4|0418|0418": "returned",
+    "slot|gr3|1|0410|0429": {
+      "status": "returned",
+      "updatedAt": "2026-05-03"
+    },
+    "slot|p3|1|0410|0429": {
+      "status": "returned",
+      "updatedAt": "2026-05-03"
+    },
+    "slot|ixus130|2|0501|0503": {
+      "status": "returned",
+      "updatedAt": "2026-05-04"
+    }
   },
-  "currentActionFilter": "ship",
-  "currentActionDayOffset": 0,
+  "currentActionFilter": "all",
+  "currentActionDayOffset": 1,
   "inventoryData": [
     {
       "model": "ixus130",
@@ -238,14 +290,6 @@
     {
       "model": "p3",
       "id": "1",
-      "status": "normal",
-      "buyDate": "",
-      "price": "",
-      "note": ""
-    },
-    {
-      "model": "GR3",
-      "id": "4",
       "status": "normal",
       "buyDate": "",
       "price": "",

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.85">
-    <title>SYDRRO-TECH V6.85 | 智能资产终端</title>
+    <meta name="app-version" content="V6.87">
+    <title>SYDRRO-TECH V6.87 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -324,6 +324,9 @@
         .schedule-customer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 900; line-height: 1.25; }
         .schedule-customer::before { content: ""; width: 4px; height: 22px; border-radius: 999px; background: linear-gradient(180deg, #007aff, #34c759); flex: 0 0 auto; }
         .schedule-customer .customer-name { color: #151922; font-size: 14px; }
+        .schedule-cell-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .schedule-cell-left { flex: 1 1 auto; min-width: 0; }
+        .schedule-cell-right { flex: 0 0 auto; display: flex; align-items: center; padding-top: 2px; }
         .order-edit-mini {
             border: 0; border-radius: 999px; padding: 4px 9px; background: #eef4fb; color: #007aff;
             font-size: 11px; font-weight: 900; cursor: pointer; transition: all .16s ease;
@@ -1309,7 +1312,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.85</span>
+                <span>INTELLIGENT ASSET OS · V6.87</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1384,7 +1387,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.85</p>
+        <p>INTELLIGENT ASSET OS · V6.87</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -4924,14 +4927,19 @@
 
                 mainRows += `<tr${rowClass}>
                     <td>
-                        <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}${editButton}</div>
-                        <div class="schedule-detail-row">
-                            <div class="schedule-meta"><span>${safePlatform}</span></div>
-                            ${timelineHtml}
+                        <div class="schedule-cell-row">
+                            <div class="schedule-cell-left">
+                                <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}</div>
+                                <div class="schedule-detail-row">
+                                    <div class="schedule-meta"><span>${safePlatform}</span></div>
+                                    ${timelineHtml}
+                                </div>
+                                ${inventoryWarningDetail}
+                                ${conflictDetail}
+                                ${turnaroundDetail}
+                            </div>
+                            ${editButton ? `<div class="schedule-cell-right">${editButton}</div>` : ''}
                         </div>
-                        ${inventoryWarningDetail}
-                        ${conflictDetail}
-                        ${turnaroundDetail}
                     </td>
                     <td><span class="schedule-device">${safeMachineUpper}</span></td>
                     <td><span class="schedule-id">#${safeId}</span></td>
