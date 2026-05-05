@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.96">
-    <title>SYDRRO-TECH V6.96 | 智能资产终端</title>
+    <meta name="app-version" content="V6.97">
+    <title>SYDRRO-TECH V6.97 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -903,7 +903,11 @@
         .mobile-workbench { display:none; }
 
         html[data-device="mobile"] {
+            --mobile-safe-top: max(14px, env(safe-area-inset-top));
             --mobile-safe-bottom: max(14px, env(safe-area-inset-bottom));
+            --mobile-visual-top: 0px;
+            --mobile-top-guard: max(var(--mobile-safe-top), calc(var(--mobile-visual-top) + 10px));
+            scroll-padding-top: calc(var(--mobile-top-guard) + 74px);
         }
 
         html[data-device="mobile"] body {
@@ -918,10 +922,11 @@
         html[data-device="mobile"] body::before { display:none; }
         html[data-device="mobile"] header {
             position:sticky;
-            top:0;
+            top:var(--mobile-top-guard);
             display:flex;
             align-items:center;
             justify-content:space-between;
+            margin-top:var(--mobile-top-guard);
             padding: max(12px, env(safe-area-inset-top)) 14px 12px;
             background: rgba(255,255,255,0.92);
             box-shadow: 0 8px 24px rgba(15,23,42,0.07);
@@ -967,7 +972,7 @@
         html[data-device="mobile"] .auth-controls {
             pointer-events:auto;
             position:fixed;
-            top:max(12px, env(safe-area-inset-top));
+            top:calc(var(--mobile-top-guard) + 2px);
             right:14px;
             z-index:430;
             gap:6px;
@@ -1591,7 +1596,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.96</span>
+                <span>INTELLIGENT ASSET OS · V6.97</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1667,7 +1672,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.96</p>
+        <p>INTELLIGENT ASSET OS · V6.97</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -2209,8 +2214,18 @@
         return (uaDataMobile || mobileUserAgent || tabletUserAgent || iPadDesktopMode || compactTouchViewport) ? 'mobile' : 'desktop';
     }
 
+    function applyMobileViewportInsets() {
+        const root = document.documentElement;
+        const isMobile = root.dataset.device === 'mobile';
+        const visualTop = isMobile && window.visualViewport
+            ? Math.max(0, Math.round(window.visualViewport.offsetTop || 0))
+            : 0;
+        root.style.setProperty('--mobile-visual-top', `${visualTop}px`);
+    }
+
     function applyClientSurfaceClass() {
         document.documentElement.dataset.device = detectClientSurface();
+        applyMobileViewportInsets();
     }
 
     applyClientSurfaceClass();
@@ -2218,6 +2233,14 @@
         window.clearTimeout(applyClientSurfaceClass._timer);
         applyClientSurfaceClass._timer = window.setTimeout(applyClientSurfaceClass, 120);
     });
+    window.addEventListener('orientationchange', () => {
+        window.clearTimeout(applyClientSurfaceClass._orientationTimer);
+        applyClientSurfaceClass._orientationTimer = window.setTimeout(applyClientSurfaceClass, 180);
+    });
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', applyMobileViewportInsets);
+        window.visualViewport.addEventListener('scroll', applyMobileViewportInsets);
+    }
 
     const STORAGE_KEYS = {
         assetsData: 'sydrro_assets_data',
