@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.92">
-    <title>SYDRRO-TECH V6.92 | 智能资产终端</title>
+    <meta name="app-version" content="V6.94">
+    <title>SYDRRO-TECH V6.94 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -425,7 +425,7 @@
         .timeline-step.start,
         .timeline-step.return { background:transparent; color:#8b98aa; }
         .timeline-line { display:none; }
-        .exception-page-grid { display:grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap:22px; align-items:start; }
+        .exception-page-grid { display:grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); gap:22px; align-items:start; margin-top:22px; }
         .exception-card { margin-top:0; }
         .exception-count-badge { flex:0 0 auto; min-width:34px; height:28px; padding:0 10px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; background:rgba(255,59,48,0.10); color:#d92d20; border:1px solid rgba(255,59,48,0.18); }
         .exception-summary-grid { display:grid; grid-template-columns: 1fr; gap:10px; }
@@ -447,6 +447,10 @@
         .exception-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
         .exception-main { font-size:13px; font-weight:900; color:#151922; line-height:1.45; }
         .exception-meta { margin-top:5px; font-size:11px; font-weight:800; color:#7b8798; line-height:1.45; }
+        .exception-actions { margin-top:8px; padding-top:8px; border-top:1px solid #edf2f7; }
+        .exception-action-btn { border:0; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:900; cursor:pointer; transition:.16s; color:#fff; }
+        .exception-action-btn { background:#007aff; }
+        .exception-action-btn:hover { filter:brightness(1.1); transform:translateY(-1px); }
         .exception-empty { min-height:88px; display:flex; align-items:center; justify-content:center; border:1px dashed #d9e2ec; border-radius:16px; color:#94a3b8; font-size:12px; font-weight:900; background:rgba(248,250,252,0.72); }
         .stock-item { background: linear-gradient(180deg, #fff, #f8fafc); border-radius: 14px; margin-bottom: 10px; padding: 11px 14px; border: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; transition: .2s; }
         .stock-item:hover { transform: translateY(-1px); border-color: rgba(52,199,89,0.22); box-shadow: 0 8px 18px rgba(15,23,42,0.06); }
@@ -535,7 +539,8 @@
             background:rgba(248,250,252,.72);
         }
 
-        .fin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 22px; }
+        .fin-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-top:22px; margin-bottom: 22px; }
+        .personal-finance-view { margin-top:22px; }
         .fin-stat-box { position: relative; padding: 20px 22px; border-radius: 18px; color: white; display: flex; flex-direction: column; justify-content: center; min-height: 116px; box-shadow: var(--shadow-soft); overflow: hidden; transition: .22s; }
         .fin-stat-box:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(15,23,42,0.10); }
         .fin-stat-box.primary { background: linear-gradient(135deg, #006ee6, #00a7ff); }
@@ -573,7 +578,7 @@
 
 
         *, *::before, *::after { box-sizing: border-box; }
-        .inventory-layout { display: grid; grid-template-columns: minmax(390px, 450px) minmax(0, 1fr); gap: 22px; align-items: stretch; }
+        .inventory-layout { display: grid; grid-template-columns: minmax(390px, 450px) minmax(0, 1fr); gap: 22px; align-items: stretch; margin-top:22px; }
         .inventory-summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
         .inv-summary-card { background:linear-gradient(180deg, #fff, #f8fafc); border:1px solid rgba(255,255,255,0.82); border-radius:18px; padding:16px 18px; box-shadow: var(--shadow-soft); position: relative; overflow: hidden; transition:.22s; }
         .inv-summary-card::before { content:""; position:absolute; left:16px; right:16px; top:0; height:3px; border-radius:0 0 999px 999px; background:rgba(0,122,255,.22); }
@@ -1314,7 +1319,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.92</span>
+                <span>INTELLIGENT ASSET OS · V6.94</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1390,7 +1395,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.92</p>
+        <p>INTELLIGENT ASSET OS · V6.94</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -4722,6 +4727,19 @@
             const editButton = isAdminMode() && Number.isInteger(item.rowIndex) && item.rowIndex >= 0
                 ? `<button type="button" class="order-edit-mini admin-only" onclick="event.stopPropagation();openOrderEditModal(${item.rowIndex})">编辑</button>`
                 : '';
+            let actionButton = '';
+            if (isAdminMode() && Number.isInteger(item.rowIndex) && item.rowIndex >= 0) {
+                const row = rawData[item.rowIndex];
+                if (row) {
+                    const orderKey = getOrderKey(row);
+                    const encodedKey = encodeInlineArg(orderKey);
+                    if (item.type === '超期未还') {
+                        actionButton = `<button type="button" class="exception-action-btn" onclick="event.stopPropagation();setReturnStatus(decodeURIComponent('${encodedKey}'), 'returned')">确认归还</button>`;
+                    } else if (item.type === '起租前未发货' || item.type === '物流延误') {
+                        actionButton = `<button type="button" class="exception-action-btn" onclick="event.stopPropagation();setShipStatus(decodeURIComponent('${encodedKey}'), 'shipped')">确认发货</button>`;
+                    }
+                }
+            }
             return `
             <div class="exception-item ${item.severity}">
                 <div class="exception-top">
@@ -4733,6 +4751,7 @@
                 </div>
                 <div class="exception-main">${escapeHtml(item.customer)} · ${escapeHtml(item.message)}</div>
                 <div class="exception-meta">${escapeHtml(item.platform)} · ${escapeHtml(item.meta)}</div>
+                ${actionButton ? `<div class="exception-actions">${actionButton}</div>` : ''}
             </div>`;
         }).join('')}</div>`;
         panel.innerHTML = listHtml;
