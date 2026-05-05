@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.91">
-    <title>SYDRRO-TECH V6.91 | 智能资产终端</title>
+    <meta name="app-version" content="V6.92">
+    <title>SYDRRO-TECH V6.92 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1314,7 +1314,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.91</span>
+                <span>INTELLIGENT ASSET OS · V6.92</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1390,7 +1390,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.91</p>
+        <p>INTELLIGENT ASSET OS · V6.92</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1406,36 +1406,35 @@
     </div>
 </header>
 
-<div class="status-bar">
-    <div class="control-group">
-        <div class="input-box">
-            <label>业务基准日</label>
-            <input type="text" id="query-date" placeholder="如 0421">
-        </div>
-        <div class="input-box">
-            <label>查询跨度 (天)</label>
-            <input type="number" id="query-days" value="1" min="1">
-        </div>
-        <button type="button" class="query-open-btn" onclick="openScheduleQueryModal()">查询档期</button>
-    </div>
-    <div class="quick-metrics">
-        <div class="metric-pill">
-            <span class="m-label">今日待发</span>
-            <span class="m-value" id="count-ship" style="color:#ff3b30">0</span>
-        </div>
-        <div class="metric-pill">
-            <span class="m-label">今日归还</span>
-            <span class="m-value" id="count-return" style="color:#af52de">0</span>
-        </div>
-        <div class="metric-pill">
-            <span class="m-label">闲置资产</span>
-            <span class="m-value" id="count-free" style="color:#34c759">0</span>
-        </div>
-    </div>
-</div>
-
 <div class="container">
     <div id="scheduling" class="page active">
+        <div class="status-bar">
+            <div class="control-group">
+                <div class="input-box">
+                    <label>业务基准日</label>
+                    <input type="text" id="query-date" placeholder="如 0421">
+                </div>
+                <div class="input-box">
+                    <label>查询跨度 (天)</label>
+                    <input type="number" id="query-days" value="1" min="1">
+                </div>
+                <button type="button" class="query-open-btn" onclick="openScheduleQueryModal()">查询档期</button>
+            </div>
+            <div class="quick-metrics">
+                <div class="metric-pill">
+                    <span class="m-label">今日待发</span>
+                    <span class="m-value" id="count-ship" style="color:#ff3b30">0</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="m-label">今日归还</span>
+                    <span class="m-value" id="count-return" style="color:#af52de">0</span>
+                </div>
+                <div class="metric-pill">
+                    <span class="m-label">闲置资产</span>
+                    <span class="m-value" id="count-free" style="color:#34c759">0</span>
+                </div>
+            </div>
+        </div>
         <div class="grid-layout">
             <div class="card">
                 <div class="card-title" id="action-card-title">🚀 实时运营指令 (今天)</div>
