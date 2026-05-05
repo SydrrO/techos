@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.97">
-    <title>SYDRRO-TECH V6.97 | 智能资产终端</title>
+    <meta name="app-version" content="V6.98">
+    <title>SYDRRO-TECH V6.98 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1586,6 +1586,84 @@
             #finance-table td,
             #model-rank-table td { grid-template-columns: 64px minmax(0, 1fr); }
         }
+
+        @media (pointer: coarse) and (max-width: 900px) {
+            html {
+                --mobile-safe-top-fallback: max(14px, env(safe-area-inset-top));
+                --mobile-safe-bottom-fallback: max(14px, env(safe-area-inset-bottom));
+                scroll-padding-top: calc(var(--mobile-safe-top-fallback) + 74px);
+            }
+            header {
+                position: sticky;
+                top: var(--mobile-safe-top-fallback);
+                z-index: 390;
+                margin-top: var(--mobile-safe-top-fallback);
+                min-height: 58px;
+                box-sizing: border-box;
+            }
+            header .brand {
+                display: block;
+                min-width: 0;
+                padding-right: 70px;
+            }
+            header .brand-title-row {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                min-width: 0;
+            }
+            header .brand h1,
+            header .brand p {
+                max-width: calc(100vw - 112px);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            header .header-actions {
+                position: fixed;
+                left: 12px;
+                right: 12px;
+                bottom: var(--mobile-safe-bottom-fallback);
+                z-index: 420;
+                display: block;
+                pointer-events: none;
+            }
+            header .nav-toggle {
+                pointer-events: auto;
+                width: 100%;
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 5px;
+                padding: 6px;
+                border-radius: 22px;
+                background: rgba(255,255,255,0.94);
+                border: 1px solid rgba(226,232,240,0.92);
+                box-shadow: 0 18px 46px rgba(15,23,42,0.16);
+                backdrop-filter: blur(20px) saturate(160%);
+            }
+            header .nav-btn {
+                min-height: 46px;
+                padding: 8px 4px;
+                border-radius: 16px;
+                line-height: 1.15;
+                white-space: normal;
+            }
+            header .nav-btn.active {
+                background: linear-gradient(135deg, #0b1220, #243044);
+                color: #fff;
+                box-shadow: 0 10px 22px rgba(15,23,42,0.20);
+            }
+            header .auth-controls {
+                position: fixed;
+                top: calc(var(--mobile-safe-top-fallback) + 2px);
+                right: 14px;
+                z-index: 430;
+                display: flex;
+                gap: 6px;
+                pointer-events: auto;
+            }
+            header .auth-badge { display: none; }
+        }
     </style>
 </head>
 <body class="app-booting">
@@ -1596,7 +1674,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.97</span>
+                <span>INTELLIGENT ASSET OS · V6.98</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1672,7 +1750,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.97</p>
+        <p>INTELLIGENT ASSET OS · V6.98</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
