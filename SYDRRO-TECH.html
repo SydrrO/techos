@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.89">
-    <title>SYDRRO-TECH V6.89 | 智能资产终端</title>
+    <meta name="app-version" content="V6.90">
+    <title>SYDRRO-TECH V6.90 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -329,6 +329,9 @@
             font-size: 11px; font-weight: 900; cursor: pointer; transition: all .16s ease; margin-left: auto;
         }
         .order-edit-mini:hover { background: rgba(0,122,255,0.12); transform: translateY(-1px); }
+        .rent-hint { font-size:10px; font-weight:800; color:#94a3b8; margin-left:6px; }
+        .rent-popup { position:fixed; z-index:9999; background:linear-gradient(135deg,#1e293b,#0f172a); color:#fff; padding:8px 14px; border-radius:12px; font-size:13px; font-weight:900; box-shadow:0 12px 36px rgba(0,0,0,0.25); pointer-events:none; white-space:nowrap; animation:rentFadeIn .15s ease; }
+        @keyframes rentFadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)}}
         .schedule-detail-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin-top:8px; padding-left:12px; min-width:0; }
         .schedule-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; padding-left: 12px; color: #7e8794; font-size: 11px; font-weight: 800; line-height: 1.35; min-width:0; }
         .schedule-detail-row .schedule-meta,
@@ -1309,7 +1312,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.89</span>
+                <span>INTELLIGENT ASSET OS · V6.90</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1384,7 +1387,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.89</p>
+        <p>INTELLIGENT ASSET OS · V6.90</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -2492,7 +2495,29 @@
         document.getElementById('schedule-query-modal')?.classList.remove('active');
     }
 
-    async function switchPage(p) {
+    let _rentPopTimer = null;
+    function showOrderRentPop(e, idx) {
+        if (e.target.closest('button')) return;
+        const r = rawData[idx];
+        if (!r) return;
+        const rent = r['租金'];
+        const rentText = rent != null && String(rent).trim() !== '' ? `租金 ¥${Number(rent).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '暂无租金';
+        const customer = r['名字'] || r['昵称'] || '-';
+        let pop = document.getElementById('rent-popup');
+        if (!pop) {
+            pop = document.createElement('div');
+            pop.id = 'rent-popup';
+            pop.className = 'rent-popup';
+            document.body.appendChild(pop);
+        }
+        pop.textContent = `${customer} · ${rentText}`;
+        const offsetX = 16, offsetY = -40;
+        pop.style.left = (e.clientX + offsetX) + 'px';
+        pop.style.top = (e.clientY + offsetY) + 'px';
+        pop.style.display = 'block';
+        clearTimeout(_rentPopTimer);
+        _rentPopTimer = setTimeout(() => { pop.style.display = 'none'; }, 1800);
+    }
         document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
         document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
         document.getElementById(p).classList.add('active');
@@ -4618,7 +4643,7 @@
         );
         const listHtml = `<div class="exception-list">${sorted.slice(0, 24).map(item => {
             const editButton = isAdminMode() && Number.isInteger(item.rowIndex) && item.rowIndex >= 0
-                ? `<button type="button" class="order-edit-mini admin-only" onclick="openOrderEditModal(${item.rowIndex})">编辑</button>`
+                ? `<button type="button" class="order-edit-mini admin-only" onclick="event.stopPropagation();openOrderEditModal(${item.rowIndex})">编辑</button>`
                 : '';
             return `
             <div class="exception-item ${item.severity}">
@@ -4919,10 +4944,12 @@
                 let turnaroundDetail = renderTurnaroundDetail(turnaroundRisks);
                 const timelineHtml = renderScheduleTimeline(shippingPlan, start, endDay, returnDueDay);
                 const editButton = isAdminMode()
-                    ? `<button type="button" class="order-edit-mini admin-only" onclick="openOrderEditModal(${idx})">编辑</button>`
+                    ? `<button type="button" class="order-edit-mini admin-only" onclick="event.stopPropagation();openOrderEditModal(${idx})">编辑</button>`
                     : '';
 
-                mainRows += `<tr${rowClass}>
+                const rentVal = r['租金'] != null ? String(r['租金']).trim() : '';
+                const rentText = rentVal ? `¥${Number(rentVal).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
+                mainRows += `<tr${rowClass} onclick="showOrderRentPop(event, ${idx})" style="cursor:pointer">
                     <td>
                         <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}${editButton}</div>
                         <div class="schedule-detail-row">
@@ -4935,7 +4962,7 @@
                     </td>
                     <td><span class="schedule-device">${safeMachineUpper}</span></td>
                     <td><span class="schedule-id">#${safeId}</span></td>
-                    <td><span class="schedule-period" title="${safeStart} ~ ${safeEnd}">${safeCompactPeriod}</span></td>
+                    <td><span class="schedule-period" title="${safeStart} ~ ${safeEnd}">${safeCompactPeriod}</span><span class="rent-hint">${rentVal ? rentText : ''}</span></td>
                 </tr>`;
             }
         });
