@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.98">
-    <title>SYDRRO-TECH V6.98 | 智能资产终端</title>
+    <meta name="app-version" content="V6.99">
+    <title>SYDRRO-TECH V6.99 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1664,6 +1664,151 @@
             }
             header .auth-badge { display: none; }
         }
+
+        @media (pointer: coarse) and (max-width: 900px), (max-width: 760px) {
+            html,
+            html[data-device="mobile"] {
+                scroll-padding-top: 78px !important;
+            }
+            body,
+            html[data-device="mobile"] body {
+                padding-bottom: calc(102px + env(safe-area-inset-bottom, 0px)) !important;
+                overflow-x: hidden !important;
+            }
+            header,
+            html[data-device="mobile"] header {
+                position: sticky !important;
+                top: 0 !important;
+                margin-top: 0 !important;
+                min-height: 64px !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                padding: 12px 14px !important;
+                box-sizing: border-box !important;
+                background: rgba(255,255,255,0.94) !important;
+                backdrop-filter: blur(18px) saturate(160%) !important;
+            }
+            header .brand,
+            html[data-device="mobile"] header .brand {
+                display: block !important;
+                min-width: 0 !important;
+                width: 100% !important;
+                padding-right: 76px !important;
+                box-sizing: border-box !important;
+            }
+            header .brand-title-row,
+            html[data-device="mobile"] header .brand-title-row {
+                display: flex !important;
+                align-items: center !important;
+                gap: 7px !important;
+                min-width: 0 !important;
+            }
+            header .brand h1,
+            header .brand p,
+            html[data-device="mobile"] header .brand h1,
+            html[data-device="mobile"] header .brand p {
+                max-width: calc(100vw - 118px) !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                white-space: nowrap !important;
+            }
+            header .brand h1,
+            html[data-device="mobile"] header .brand h1 {
+                font-size: 18px !important;
+            }
+            header .header-actions,
+            html[data-device="mobile"] header .header-actions {
+                position: static !important;
+                inset: auto !important;
+                display: block !important;
+                width: 0 !important;
+                min-width: 0 !important;
+                height: 0 !important;
+                pointer-events: none !important;
+            }
+            header .nav-toggle,
+            html[data-device="mobile"] header .nav-toggle {
+                position: fixed !important;
+                left: 12px !important;
+                right: 12px !important;
+                top: auto !important;
+                bottom: 14px !important;
+                bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+                z-index: 460 !important;
+                width: auto !important;
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+                gap: 5px !important;
+                padding: 6px !important;
+                border-radius: 22px !important;
+                background: rgba(255,255,255,0.95) !important;
+                border: 1px solid rgba(226,232,240,0.92) !important;
+                box-shadow: 0 18px 46px rgba(15,23,42,0.16) !important;
+                backdrop-filter: blur(20px) saturate(160%) !important;
+                pointer-events: auto !important;
+            }
+            header .nav-btn,
+            html[data-device="mobile"] header .nav-btn {
+                width: 100% !important;
+                min-height: 46px !important;
+                padding: 7px 4px !important;
+                border-radius: 16px !important;
+                font-size: 11px !important;
+                line-height: 1.15 !important;
+                white-space: normal !important;
+            }
+            header .nav-count,
+            html[data-device="mobile"] header .nav-count {
+                min-width: 16px !important;
+                height: 16px !important;
+                margin-left: 4px !important;
+            }
+            header .auth-controls,
+            html[data-device="mobile"] header .auth-controls {
+                position: absolute !important;
+                top: 50% !important;
+                right: 14px !important;
+                transform: translateY(-50%) !important;
+                z-index: 2 !important;
+                display: flex !important;
+                align-items: center !important;
+                gap: 6px !important;
+                width: auto !important;
+                height: auto !important;
+                pointer-events: auto !important;
+            }
+            header .auth-badge,
+            html[data-device="mobile"] header .auth-badge {
+                display: none !important;
+            }
+            header .auth-btn,
+            html[data-device="mobile"] header .auth-btn {
+                height: 36px !important;
+                min-width: 56px !important;
+                padding: 0 12px !important;
+                border-radius: 999px !important;
+                font-size: 12px !important;
+                box-shadow: 0 8px 18px rgba(15,23,42,0.08) !important;
+            }
+            #scheduling .status-bar,
+            html[data-device="mobile"] #scheduling .status-bar {
+                display: none !important;
+            }
+            .mobile-workbench,
+            html[data-device="mobile"] .mobile-workbench {
+                display: grid !important;
+                gap: 12px !important;
+                margin-top: 12px !important;
+            }
+            .mobile-quick-grid,
+            html[data-device="mobile"] .mobile-quick-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+            }
+            html[data-auth-role="viewer"] .mobile-quick-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body class="app-booting">
@@ -1674,7 +1819,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.98</span>
+                <span>INTELLIGENT ASSET OS · V6.99</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1750,7 +1895,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.98</p>
+        <p>INTELLIGENT ASSET OS · V6.99</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1824,8 +1969,6 @@
             <div class="mobile-quick-grid">
                 <button type="button" class="mobile-quick-btn primary" onclick="openScheduleQueryModal()">查档期 <span class="arrow">›</span></button>
                 <button type="button" class="mobile-quick-btn admin-only" onclick="openImageOrderModal()">手动录单 <span class="arrow">›</span></button>
-                <button type="button" class="mobile-quick-btn warning" onclick="switchPage('exceptions')">异常订单 <span class="arrow">›</span></button>
-                <button type="button" class="mobile-quick-btn" onclick="switchPage('inventory')">库存状态 <span class="arrow">›</span></button>
             </div>
 
             <section class="mobile-panel">
