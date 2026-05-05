@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.95">
-    <title>SYDRRO-TECH V6.95 | 智能资产终端</title>
+    <meta name="app-version" content="V6.96">
+    <title>SYDRRO-TECH V6.96 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -900,6 +900,278 @@
         @keyframes backdropFade { from { opacity: 0; } to { opacity: 1; } }
         @keyframes panelRise { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+        .mobile-workbench { display:none; }
+
+        html[data-device="mobile"] {
+            --mobile-safe-bottom: max(14px, env(safe-area-inset-bottom));
+        }
+
+        html[data-device="mobile"] body {
+            overflow-x:hidden;
+            padding-bottom: calc(78px + var(--mobile-safe-bottom));
+            background:
+                radial-gradient(circle at 12% 0%, rgba(0,122,255,0.10), transparent 32%),
+                linear-gradient(180deg, #f8fbff 0%, #f2f6fb 52%, #eef3f8 100%);
+            background-attachment: scroll;
+        }
+
+        html[data-device="mobile"] body::before { display:none; }
+        html[data-device="mobile"] header {
+            position:sticky;
+            top:0;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            padding: max(12px, env(safe-area-inset-top)) 14px 12px;
+            background: rgba(255,255,255,0.92);
+            box-shadow: 0 8px 24px rgba(15,23,42,0.07);
+        }
+        html[data-device="mobile"] .brand h1 { font-size:19px; line-height:1; }
+        html[data-device="mobile"] .brand p { font-size:9px; margin-top:3px; }
+        html[data-device="mobile"] .school-badge { height:21px; padding:0 8px; font-size:10px; max-width:118px; overflow:hidden; text-overflow:ellipsis; }
+        html[data-device="mobile"] .header-actions {
+            position:fixed;
+            left:12px;
+            right:12px;
+            bottom:var(--mobile-safe-bottom);
+            z-index:420;
+            pointer-events:none;
+            display:block;
+        }
+        html[data-device="mobile"] .nav-toggle {
+            pointer-events:auto;
+            width:100%;
+            display:grid;
+            grid-template-columns:repeat(4, minmax(0, 1fr));
+            gap:5px;
+            padding:6px;
+            border-radius:22px;
+            background:rgba(255,255,255,0.92);
+            border:1px solid rgba(226,232,240,0.92);
+            box-shadow:0 18px 46px rgba(15,23,42,0.16);
+            backdrop-filter:blur(20px) saturate(160%);
+        }
+        html[data-device="mobile"] .nav-btn {
+            min-height:46px;
+            padding:8px 4px;
+            border-radius:16px;
+            font-size:11px;
+            line-height:1.15;
+            white-space:normal;
+        }
+        html[data-device="mobile"] .nav-btn.active {
+            background:linear-gradient(135deg, #0b1220, #243044);
+            color:#fff;
+            box-shadow:0 10px 22px rgba(15,23,42,0.20);
+        }
+        html[data-device="mobile"] .auth-controls {
+            pointer-events:auto;
+            position:fixed;
+            top:max(12px, env(safe-area-inset-top));
+            right:14px;
+            z-index:430;
+            gap:6px;
+        }
+        html[data-device="mobile"] .auth-badge { display:none; }
+        html[data-device="mobile"] .auth-btn {
+            height:32px;
+            padding:0 11px;
+            border-radius:999px;
+            background:#eef2f7;
+            color:#475467;
+            box-shadow:0 8px 18px rgba(15,23,42,0.08);
+        }
+        html[data-device="mobile"] .container { padding:0 12px 18px; }
+        html[data-device="mobile"] .page.active { animation:fadeIn .24s ease-out; }
+        html[data-device="mobile"] #scheduling .grid-layout { display:none; }
+        html[data-device="mobile"] #scheduling .status-bar {
+            width:auto;
+            margin:12px 0;
+            padding:12px;
+            border-radius:20px;
+            display:block;
+            box-shadow:0 14px 34px rgba(15,23,42,0.08);
+        }
+        html[data-device="mobile"] #scheduling .control-group {
+            width:100%;
+            display:grid;
+            grid-template-columns:minmax(0, 1fr) minmax(0, 1fr);
+            gap:10px;
+        }
+        html[data-device="mobile"] #scheduling .input-box { min-width:0; }
+        html[data-device="mobile"] #scheduling .input-box input { width:100%; box-sizing:border-box; }
+        html[data-device="mobile"] #scheduling .query-open-btn { grid-column:1 / -1; width:100%; height:46px; }
+        html[data-device="mobile"] #scheduling .quick-metrics { display:none; }
+        html[data-device="mobile"] .mobile-workbench {
+            display:grid;
+            gap:12px;
+        }
+        .mobile-hero,
+        .mobile-panel {
+            border:1px solid rgba(226,232,240,0.9);
+            box-shadow:0 14px 34px rgba(15,23,42,0.07);
+            overflow:hidden;
+        }
+        .mobile-hero {
+            position:relative;
+            padding:18px;
+            border-radius:24px;
+            color:#fff;
+            background:
+                linear-gradient(135deg, rgba(11,18,32,0.98), rgba(31,42,62,0.96)),
+                linear-gradient(135deg, rgba(0,122,255,0.32), rgba(52,199,89,0.22));
+        }
+        .mobile-hero::after {
+            content:"";
+            position:absolute;
+            right:-46px;
+            top:-52px;
+            width:150px;
+            height:150px;
+            border-radius:999px;
+            background:rgba(255,255,255,0.10);
+        }
+        .mobile-hero-title { position:relative; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+        .mobile-hero-title span { display:block; font-size:11px; color:rgba(255,255,255,0.64); font-weight:800; margin-bottom:5px; }
+        .mobile-hero-title strong { display:block; font-size:22px; line-height:1.18; font-weight:950; }
+        .mobile-hero-badge { flex:0 0 auto; padding:7px 10px; border-radius:999px; background:rgba(255,255,255,0.12); color:#d7ecff; font-size:11px; font-weight:900; }
+        .mobile-hero-metrics {
+            position:relative;
+            z-index:1;
+            display:grid;
+            grid-template-columns:repeat(3, minmax(0, 1fr));
+            gap:8px;
+            margin-top:17px;
+        }
+        .mobile-hero-metric {
+            min-width:0;
+            padding:11px 10px;
+            border-radius:17px;
+            background:rgba(255,255,255,0.10);
+            border:1px solid rgba(255,255,255,0.12);
+        }
+        .mobile-hero-metric span { display:block; font-size:10px; color:rgba(255,255,255,0.62); font-weight:800; }
+        .mobile-hero-metric strong { display:block; margin-top:5px; font-size:22px; line-height:1; font-weight:950; }
+        .mobile-quick-grid {
+            display:grid;
+            grid-template-columns:repeat(2, minmax(0, 1fr));
+            gap:10px;
+        }
+        .mobile-quick-btn {
+            min-height:54px;
+            border:0;
+            border-radius:18px;
+            padding:0 14px;
+            background:#fff;
+            color:#111827;
+            box-shadow:0 10px 26px rgba(15,23,42,0.065);
+            font-size:13px;
+            font-weight:950;
+            text-align:left;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            cursor:pointer;
+        }
+        .mobile-quick-btn.primary { background:linear-gradient(135deg, #007aff, #1fb6ff); color:#fff; }
+        .mobile-quick-btn.warning { color:#c2410c; background:linear-gradient(135deg, #fff7ed, #fff); }
+        .mobile-quick-btn .arrow { font-size:18px; opacity:.62; }
+        .mobile-panel {
+            border-radius:22px;
+            background:rgba(255,255,255,0.90);
+            padding:14px;
+        }
+        .mobile-panel-head {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:11px;
+        }
+        .mobile-panel-title { font-size:15px; font-weight:950; color:#101828; }
+        .mobile-panel-note { font-size:11px; color:#8b98aa; font-weight:800; white-space:nowrap; }
+        .mobile-feed { display:grid; gap:9px; }
+        .mobile-empty {
+            padding:16px;
+            border-radius:16px;
+            background:#f8fafc;
+            border:1px dashed #dbe4f0;
+            color:#8b98aa;
+            text-align:center;
+            font-size:12px;
+            font-weight:900;
+        }
+        html[data-device="mobile"] .mobile-action-feed .action-day-tabs,
+        html[data-device="mobile"] .mobile-action-feed .action-summary,
+        html[data-device="mobile"] .mobile-action-feed .filter-hint { display:none; }
+        html[data-device="mobile"] .mobile-action-feed .action-section { display:grid; gap:9px; }
+        html[data-device="mobile"] .mobile-action-feed .action-section-head { margin-bottom:0; }
+        html[data-device="mobile"] .mobile-action-feed .action-card {
+            margin:0;
+            padding:13px;
+            border-radius:18px;
+            box-shadow:0 8px 20px rgba(15,23,42,0.055);
+        }
+        .mobile-schedule-card {
+            padding:13px;
+            border-radius:18px;
+            background:linear-gradient(180deg, #fff, #f9fbfd);
+            border:1px solid #e8eef6;
+            box-shadow:0 8px 20px rgba(15,23,42,0.055);
+        }
+        .mobile-schedule-card.warn { border-color:rgba(255,149,0,0.35); background:linear-gradient(180deg, #fffaf3, #fff); }
+        .mobile-schedule-card.danger { border-color:rgba(255,59,48,0.32); background:linear-gradient(180deg, #fff5f4, #fff); }
+        .mobile-schedule-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+        .mobile-schedule-name { min-width:0; color:#101828; font-size:15px; font-weight:950; line-height:1.25; }
+        .mobile-schedule-device { flex:0 0 auto; color:#007aff; font-size:12px; font-weight:950; }
+        .mobile-schedule-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .mobile-schedule-tags span {
+            display:inline-flex;
+            align-items:center;
+            min-height:22px;
+            padding:0 8px;
+            border-radius:999px;
+            background:#eef4fb;
+            color:#5d6b80;
+            font-size:10px;
+            font-weight:900;
+        }
+        .mobile-schedule-card .schedule-timeline { margin-top:10px; }
+        .mobile-schedule-meta {
+            margin-top:8px;
+            color:#7b8796;
+            font-size:11px;
+            font-weight:800;
+            line-height:1.45;
+        }
+        .mobile-free-group {
+            padding:12px;
+            border-radius:18px;
+            background:linear-gradient(180deg, #fff, #f8fbff);
+            border:1px solid #e8eef6;
+        }
+        .mobile-free-group-title {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            color:#101828;
+            font-size:12px;
+            font-weight:950;
+            margin-bottom:9px;
+        }
+        .mobile-free-chips { display:flex; flex-wrap:wrap; gap:7px; }
+        .mobile-free-chip {
+            display:inline-flex;
+            align-items:center;
+            min-height:30px;
+            padding:0 10px;
+            border-radius:999px;
+            color:#147a3d;
+            background:rgba(52,199,89,0.11);
+            font-size:12px;
+            font-weight:950;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -1319,7 +1591,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.95</span>
+                <span>INTELLIGENT ASSET OS · V6.96</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1395,7 +1667,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.95</p>
+        <p>INTELLIGENT ASSET OS · V6.96</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1440,6 +1712,70 @@
                 </div>
             </div>
         </div>
+
+        <div id="mobile-workbench" class="mobile-workbench" aria-label="手机端工作台">
+            <section class="mobile-hero">
+                <div class="mobile-hero-title">
+                    <div>
+                        <span>移动工作台</span>
+                        <strong id="mobile-query-summary">今日运营概览</strong>
+                    </div>
+                    <div id="mobile-exception-count" class="mobile-hero-badge">0 异常</div>
+                </div>
+                <div class="mobile-hero-metrics">
+                    <div class="mobile-hero-metric">
+                        <span>待发货</span>
+                        <strong id="mobile-today-ship">0</strong>
+                    </div>
+                    <div class="mobile-hero-metric">
+                        <span>待归还</span>
+                        <strong id="mobile-today-return">0</strong>
+                    </div>
+                    <div class="mobile-hero-metric">
+                        <span>空闲</span>
+                        <strong id="mobile-free-count">0</strong>
+                    </div>
+                </div>
+            </section>
+
+            <div class="mobile-quick-grid">
+                <button type="button" class="mobile-quick-btn primary" onclick="openScheduleQueryModal()">查档期 <span class="arrow">›</span></button>
+                <button type="button" class="mobile-quick-btn admin-only" onclick="openImageOrderModal()">手动录单 <span class="arrow">›</span></button>
+                <button type="button" class="mobile-quick-btn warning" onclick="switchPage('exceptions')">异常订单 <span class="arrow">›</span></button>
+                <button type="button" class="mobile-quick-btn" onclick="switchPage('inventory')">库存状态 <span class="arrow">›</span></button>
+            </div>
+
+            <section class="mobile-panel">
+                <div class="mobile-panel-head">
+                    <div class="mobile-panel-title">当前要处理</div>
+                    <div id="mobile-action-note" class="mobile-panel-note">今天</div>
+                </div>
+                <div id="mobile-action-feed" class="mobile-feed mobile-action-feed">
+                    <div class="mobile-empty">等待订单数据...</div>
+                </div>
+            </section>
+
+            <section class="mobile-panel">
+                <div class="mobile-panel-head">
+                    <div class="mobile-panel-title">当前档期</div>
+                    <div id="mobile-schedule-note" class="mobile-panel-note">查询范围</div>
+                </div>
+                <div id="mobile-schedule-feed" class="mobile-feed">
+                    <div class="mobile-empty">等待查询结果...</div>
+                </div>
+            </section>
+
+            <section class="mobile-panel">
+                <div class="mobile-panel-head">
+                    <div class="mobile-panel-title">空闲机器</div>
+                    <div id="mobile-free-note" class="mobile-panel-note">READY</div>
+                </div>
+                <div id="mobile-free-feed" class="mobile-feed">
+                    <div class="mobile-empty">等待库存数据...</div>
+                </div>
+            </section>
+        </div>
+
         <div class="grid-layout">
             <div class="card">
                 <div class="card-title" id="action-card-title">🚀 实时运营指令 (今天)</div>
@@ -2624,6 +2960,9 @@
         if(p === 'inventory') {
             renderModelOptions();
             renderInventoryManager();
+        }
+        if (document.documentElement.dataset.device === 'mobile') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -4826,10 +5165,32 @@
         document.getElementById('personal-income-list').innerHTML = rowsHtml || '<div class="personal-income-empty">近30天暂无属于你的收入订单</div>';
     }
 
+    function setTextIfPresent(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    function renderMobileEmptyDashboard() {
+        setTextIfPresent('mobile-query-summary', '暂无订单数据');
+        setTextIfPresent('mobile-exception-count', '0 异常');
+        setTextIfPresent('mobile-today-ship', '0');
+        setTextIfPresent('mobile-today-return', '0');
+        setTextIfPresent('mobile-free-count', '0');
+        setTextIfPresent('mobile-action-note', '等待同步');
+        setTextIfPresent('mobile-schedule-note', '暂无结果');
+        const actionFeed = document.getElementById('mobile-action-feed');
+        const scheduleFeed = document.getElementById('mobile-schedule-feed');
+        const freeFeed = document.getElementById('mobile-free-feed');
+        if (actionFeed) actionFeed.innerHTML = '<div class="mobile-empty">暂无可处理订单</div>';
+        if (scheduleFeed) scheduleFeed.innerHTML = '<div class="mobile-empty">暂无档期数据</div>';
+        if (freeFeed) freeFeed.innerHTML = '<div class="mobile-empty">暂无空闲资产</div>';
+    }
+
     function updateDashboard() {
         if (!rawData.length) {
             renderExceptionPanel([]);
             renderPersonalIncomeView();
+            renderMobileEmptyDashboard();
             return;
         }
 
@@ -4847,6 +5208,7 @@
         const actionBuckets = ACTION_DAY_OFFSETS.map(() => createActionBucket());
         let exceptionItems = [];
         let mainRows = '', cShip = 0, cReturn = 0;
+        let mobileScheduleCards = '';
         let occupiedSet = new Set();
         let finRows = '';
         let personalIncomeRows = '';
@@ -5127,6 +5489,25 @@
                     <td><span class="schedule-id">#${safeId}</span></td>
                     <td><span class="schedule-period" title="${safeStart} ~ ${safeEnd}">${safeCompactPeriod}</span><span class="rent-hint">${rentVal ? rentText : ''}</span></td>
                 </tr>`;
+
+                const mobileCardClass = conflictList.length || hardTurnaroundRisks.length ? 'danger' : (inventoryBlocked ? 'warn' : '');
+                const mobileStatusTags = [
+                    isPrepping ? '<span>备货中</span>' : '',
+                    inventoryBlocked ? `<span>设备${inventoryStatusLabel}</span>` : '',
+                    conflictList.length ? '<span>档期冲突</span>' : '',
+                    hardTurnaroundRisks.length ? '<span>周转风险</span>' : '',
+                    handoffTips.length && !hardTurnaroundRisks.length ? '<span>租客直发</span>' : ''
+                ].filter(Boolean).join('');
+                mobileScheduleCards += `
+                    <div class="mobile-schedule-card ${mobileCardClass}" onclick="showOrderRentPop(event, ${idx})">
+                        <div class="mobile-schedule-top">
+                            <div class="mobile-schedule-name">${safeCustomer || '-'}</div>
+                            <div class="mobile-schedule-device">${safeMachineUpper} #${safeId}</div>
+                        </div>
+                        <div class="mobile-schedule-tags"><span>${safePlatform}</span>${mobileStatusTags}</div>
+                        ${timelineHtml}
+                        <div class="mobile-schedule-meta">${safeArea} · ${safeCompactPeriod}${rentVal ? ` · ${rentText}` : ''}</div>
+                    </div>`;
             }
         });
 
@@ -5140,6 +5521,10 @@
         cReturn = todayActionBucket.pendingReturnList.length + todayActionBucket.overdueReturnList.length;
         document.getElementById('count-ship').innerText = cShip;
         document.getElementById('count-return').innerText = cReturn;
+        setTextIfPresent('mobile-query-summary', getScheduleQuerySummary() || '今日运营概览');
+        setTextIfPresent('mobile-exception-count', `${exceptionItems.length} 异常`);
+        setTextIfPresent('mobile-today-ship', cShip);
+        setTextIfPresent('mobile-today-return', cReturn);
         const titleEl = document.getElementById('action-card-title');
         if (titleEl) titleEl.innerHTML = `🚀 实时运营指令 (${getActionDayLabel(selectedActionOffset)})`;
 
@@ -5203,9 +5588,19 @@
             ? '当前暂无未处理订单，可点击已处理查看记录'
             : '当前筛选下暂无单子';
         document.getElementById('action-list').innerHTML = (summaryHtml + (sectionHtml || `<div class="empty-state">${emptyActionText}</div>`));
+        const mobileActionFeed = document.getElementById('mobile-action-feed');
+        if (mobileActionFeed) {
+            mobileActionFeed.innerHTML = sectionHtml || `<div class="mobile-empty">${escapeHtml(emptyActionText)}</div>`;
+        }
+        setTextIfPresent('mobile-action-note', `${getActionDayLabel(selectedActionOffset)} · ${formatCompactDateStr(selectedActionDate)}`);
 
         // 渲染表格，如果 mainRows 真的为空，才会显示“档期空闲”
         document.querySelector('#main-table tbody').innerHTML = mainRows || '<tr><td colspan="4" class="empty-row">档期空闲</td></tr>';
+        const mobileScheduleFeed = document.getElementById('mobile-schedule-feed');
+        if (mobileScheduleFeed) {
+            mobileScheduleFeed.innerHTML = mobileScheduleCards || '<div class="mobile-empty">当前查询范围内档期空闲</div>';
+        }
+        setTextIfPresent('mobile-schedule-note', getScheduleQuerySummary() || '查询范围');
 
         renderInventory(occupiedSet);
 
@@ -5380,6 +5775,8 @@
 
         const free = allInv.filter(v => !occupiedSet.has(normalizeKey(v.model, v.id)));
         document.getElementById('count-free').innerText = free.length;
+        setTextIfPresent('mobile-free-count', free.length);
+        setTextIfPresent('mobile-free-note', `${free.length} 台 READY`);
 
         const grouped = free.reduce((a, b) => { 
             let displayModel = b.model.toUpperCase();
@@ -5396,6 +5793,17 @@
             invHtml += `</div>`;
         }
         document.getElementById('free-list').innerHTML = invHtml || '<div class="empty-state">暂无空闲资产</div>';
+        const mobileFreeFeed = document.getElementById('mobile-free-feed');
+        if (mobileFreeFeed) {
+            const mobileHtml = Object.entries(grouped).map(([model, ids]) => `
+                <div class="mobile-free-group">
+                    <div class="mobile-free-group-title"><span>${escapeHtml(model)}</span><span>${ids.length} 台</span></div>
+                    <div class="mobile-free-chips">
+                        ${ids.map(id => `<span class="mobile-free-chip">#${escapeHtml(id)}</span>`).join('')}
+                    </div>
+                </div>`).join('');
+            mobileFreeFeed.innerHTML = mobileHtml || '<div class="mobile-empty">暂无空闲资产</div>';
+        }
     }
 
     document.getElementById('query-date').oninput = scheduleDashboardUpdate;
