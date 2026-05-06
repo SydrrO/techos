@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.99">
-    <title>SYDRRO-TECH V6.99 | 智能资产终端</title>
+    <meta name="app-version" content="V6.101">
+    <title>SYDRRO-TECH V6.101 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1668,23 +1668,22 @@
         @media (pointer: coarse) and (max-width: 900px), (max-width: 760px) {
             html,
             html[data-device="mobile"] {
-                scroll-padding-top: 78px !important;
+                scroll-padding-top: 132px !important;
             }
             body,
             html[data-device="mobile"] body {
-                padding-bottom: calc(102px + env(safe-area-inset-bottom, 0px)) !important;
+                padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
                 overflow-x: hidden !important;
             }
             header,
             html[data-device="mobile"] header {
                 position: sticky !important;
                 top: 0 !important;
+                z-index: 100 !important;
                 margin-top: 0 !important;
-                min-height: 64px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: flex-start !important;
-                padding: 12px 14px !important;
+                min-height: 0 !important;
+                display: block !important;
+                padding: 12px 14px 14px !important;
                 box-sizing: border-box !important;
                 background: rgba(255,255,255,0.94) !important;
                 backdrop-filter: blur(18px) saturate(160%) !important;
@@ -1722,21 +1721,18 @@
                 position: static !important;
                 inset: auto !important;
                 display: block !important;
-                width: 0 !important;
+                width: 100% !important;
                 min-width: 0 !important;
-                height: 0 !important;
-                pointer-events: none !important;
+                height: auto !important;
+                margin-top: 12px !important;
+                pointer-events: auto !important;
             }
             header .nav-toggle,
             html[data-device="mobile"] header .nav-toggle {
-                position: fixed !important;
-                left: 12px !important;
-                right: 12px !important;
-                top: auto !important;
-                bottom: 14px !important;
-                bottom: calc(14px + env(safe-area-inset-bottom, 0px)) !important;
-                z-index: 460 !important;
-                width: auto !important;
+                position: static !important;
+                inset: auto !important;
+                z-index: 1 !important;
+                width: 100% !important;
                 display: grid !important;
                 grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
                 gap: 5px !important;
@@ -1767,9 +1763,9 @@
             header .auth-controls,
             html[data-device="mobile"] header .auth-controls {
                 position: absolute !important;
-                top: 50% !important;
+                top: 14px !important;
                 right: 14px !important;
-                transform: translateY(-50%) !important;
+                transform: none !important;
                 z-index: 2 !important;
                 display: flex !important;
                 align-items: center !important;
@@ -1793,6 +1789,37 @@
             }
             #scheduling .status-bar,
             html[data-device="mobile"] #scheduling .status-bar {
+                display: block !important;
+                width: auto !important;
+                margin: 12px 0 !important;
+                padding: 12px !important;
+                border-radius: 20px !important;
+                box-shadow: 0 12px 30px rgba(15,23,42,0.07) !important;
+            }
+            #scheduling .status-bar .control-group,
+            html[data-device="mobile"] #scheduling .status-bar .control-group {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+            #scheduling .status-bar .input-box,
+            html[data-device="mobile"] #scheduling .status-bar .input-box {
+                min-width: 0 !important;
+            }
+            #scheduling .status-bar .input-box input,
+            html[data-device="mobile"] #scheduling .status-bar .input-box input {
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            #scheduling .status-bar .query-open-btn,
+            html[data-device="mobile"] #scheduling .status-bar .query-open-btn {
+                grid-column: 1 / -1 !important;
+                width: 100% !important;
+                height: 46px !important;
+            }
+            #scheduling .status-bar .quick-metrics,
+            html[data-device="mobile"] #scheduling .status-bar .quick-metrics {
                 display: none !important;
             }
             .mobile-workbench,
@@ -1806,7 +1833,7 @@
                 grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
             }
             html[data-auth-role="viewer"] .mobile-quick-grid {
-                grid-template-columns: 1fr !important;
+                display: none !important;
             }
         }
     </style>
@@ -1819,7 +1846,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.99</span>
+                <span>INTELLIGENT ASSET OS · V6.101</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1895,7 +1922,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.99</p>
+        <p>INTELLIGENT ASSET OS · V6.101</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -1967,8 +1994,7 @@
             </section>
 
             <div class="mobile-quick-grid">
-                <button type="button" class="mobile-quick-btn primary" onclick="openScheduleQueryModal()">查档期 <span class="arrow">›</span></button>
-                <button type="button" class="mobile-quick-btn admin-only" onclick="openImageOrderModal()">手动录单 <span class="arrow">›</span></button>
+                <button type="button" class="mobile-quick-btn primary admin-only" onclick="openImageOrderModal()">手动录单 <span class="arrow">›</span></button>
             </div>
 
             <section class="mobile-panel">
