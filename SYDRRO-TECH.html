@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V6.101">
-    <title>SYDRRO-TECH V6.101 | 智能资产终端</title>
+    <meta name="app-version" content="V6.102">
+    <title>SYDRRO-TECH V6.102 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1846,7 +1846,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V6.101</span>
+                <span>INTELLIGENT ASSET OS · V6.102</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1922,7 +1922,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V6.101</p>
+        <p>INTELLIGENT ASSET OS · V6.102</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -5744,7 +5744,7 @@
 
                 const rentVal = r['租金'] != null ? String(r['租金']).trim() : '';
                 const rentText = rentVal ? `¥${Number(rentVal).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-';
-                mainRows += `<tr${rowClass} onclick="showOrderRentPop(event, ${idx})" style="cursor:pointer">
+                mainRows += `<tr${rowClass} onclick="openOrderEditModal(${idx})" style="cursor:pointer">
                     <td>
                         <div class="schedule-customer">${statusTag}<span class="customer-name">${safeCustomer || '-'}</span>${inventoryWarningTag}${conflictTag}${turnaroundTag}${editButton}</div>
                         <div class="schedule-detail-row">
@@ -5769,10 +5769,11 @@
                     handoffTips.length && !hardTurnaroundRisks.length ? '<span>租客直发</span>' : ''
                 ].filter(Boolean).join('');
                 mobileScheduleCards += `
-                    <div class="mobile-schedule-card ${mobileCardClass}" onclick="showOrderRentPop(event, ${idx})">
+                    <div class="mobile-schedule-card ${mobileCardClass}" onclick="openOrderEditModal(${idx})">
                         <div class="mobile-schedule-top">
                             <div class="mobile-schedule-name">${safeCustomer || '-'}</div>
                             <div class="mobile-schedule-device">${safeMachineUpper} #${safeId}</div>
+                            ${editButton}
                         </div>
                         <div class="mobile-schedule-tags"><span>${safePlatform}</span>${mobileStatusTags}</div>
                         ${timelineHtml}
