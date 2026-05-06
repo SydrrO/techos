@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V7.01">
-    <title>SYDRRO-TECH V7.01 | 智能资产终端</title>
+    <meta name="app-version" content="V7.04">
+    <title>SYDRRO-TECH V7.04 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -446,6 +446,7 @@
         .exception-device { font-size:12px; font-weight:900; color:#007aff; white-space:nowrap; }
         .exception-right { display:flex; align-items:center; gap:8px; margin-left:auto; }
         .exception-main { font-size:13px; font-weight:900; color:#151922; line-height:1.45; }
+        .exception-overdue-text { display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; background:rgba(255,59,48,0.10); color:#d92d20; font-weight:900; }
         .exception-meta { margin-top:5px; font-size:11px; font-weight:800; color:#7b8798; line-height:1.45; }
         .exception-actions { margin-top:8px; padding-top:8px; border-top:1px solid #edf2f7; }
         .exception-action-btn { border:0; border-radius:8px; padding:5px 12px; font-size:11px; font-weight:900; cursor:pointer; transition:.16s; color:#fff; }
@@ -634,6 +635,7 @@
         .inv-current-badge.free { background:rgba(52,199,89,.12); color:#1f9d47; }
         .inv-current-badge.busy { background:rgba(255,149,0,.12); color:#d86f00; }
         .inv-current-badge.prep { background:rgba(0,122,255,.10); color:#007aff; }
+        .inv-current-badge.overdue { background:rgba(255,59,48,.12); color:#d92d20; }
         .inv-current-badge.disabled { background:rgba(99,115,129,.12); color:#637381; }
         .inv-current-main { font-size:12px; font-weight:800; color:var(--text-main); line-height:1.35; word-break:break-word; }
         .inv-current-sub { font-size:11px; font-weight:700; color:#98a2b3; line-height:1.4; word-break:break-word; }
@@ -2004,7 +2006,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V7.01</span>
+                <span>INTELLIGENT ASSET OS · V7.04</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -2080,7 +2082,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V7.01</p>
+        <p>INTELLIGENT ASSET OS · V7.04</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -3156,6 +3158,11 @@
         const date = new Date(realToday.getTime() + normalizeActionDayOffset(offset) * DAY_MS);
         date.setHours(0, 0, 0, 0);
         return date;
+    }
+
+    function getOverdueReturnDays(dueDay, referenceDay = realToday) {
+        if (!dueDay || referenceDay <= dueDay) return 0;
+        return Math.max(1, Math.ceil((referenceDay.getTime() - dueDay.getTime()) / DAY_MS));
     }
 
     function isSameDay(a, b) {
@@ -4703,7 +4710,10 @@
 
             const info = getInventoryOrderInfo(item);
             const bucket = map.get(key) || { current: null, next: null };
-            if (realToday >= start && realToday <= returnDueDay) {
+            const overdueDays = getOverdueReturnDays(returnDueDay);
+            if (overdueDays > 0) {
+                bucket.current = { ...info, phase: 'overdue', overdueDays };
+            } else if (realToday >= start && realToday <= returnDueDay) {
                 bucket.current = { ...info, phase: 'busy' };
             } else if (realToday >= prepWindow && realToday < start && !bucket.current) {
                 bucket.current = { ...info, phase: 'prep' };
@@ -4734,11 +4744,13 @@
             </div>`;
         }
 
-        const badgeClass = current.phase === 'prep' ? 'prep' : 'busy';
-        const badgeText = current.phase === 'prep' ? '备货中' : '出租中';
+        const badgeClass = current.phase === 'prep' ? 'prep' : (current.phase === 'overdue' ? 'overdue' : 'busy');
+        const badgeText = current.phase === 'prep' ? '备货中' : (current.phase === 'overdue' ? '逾期未还' : '出租中');
         const subText = current.phase === 'prep'
             ? `${formatDateStr(current.shippingPlan.shipDate)} 发 · ${formatDateStr(current.start)} 起租`
-            : `预计 ${formatDateStr(current.returnDueDay)} 归还`;
+            : (current.phase === 'overdue'
+                ? `已逾期 ${current.overdueDays || getOverdueReturnDays(current.returnDueDay)} 天 · 应还 ${formatDateStr(current.returnDueDay)}`
+                : `预计 ${formatDateStr(current.returnDueDay)} 归还`);
         return `<div class="inv-current">
             <span class="inv-current-badge ${badgeClass}">${badgeText}</span>
             <span class="inv-current-main">${escapeHtml(current.customer)} · ${escapeHtml(current.platform)}</span>
@@ -5499,7 +5511,9 @@
         const baseMeta = `${String(r['平台'] || '私单').trim() || '私单'} · ${periodText}`;
 
         if (realToday > dueDay && !isReturned) {
-            addOrderException(list, '超期未还', 'danger', r, `应于 ${formatDateStr(dueDay)} 归还，当前仍未确认`, baseMeta, idx);
+            const overdueDays = getOverdueReturnDays(dueDay);
+            const overdueMeta = `${formatDateStr(start)} ~ ${formatDateStr(endDay)}`;
+            addOrderException(list, '超期未还', 'danger', r, `已逾期 ${overdueDays} 天`, overdueMeta, idx);
         }
 
         if (activeOrUpcoming && !isShipped && realToday >= shippingPlan.arrivalDate) {
@@ -5589,6 +5603,9 @@
                     }
                 }
             }
+            const mainMessageHtml = item.type === '超期未还'
+                ? `${escapeHtml(item.customer)} · <span class="exception-overdue-text">${escapeHtml(item.message)}</span>`
+                : `${escapeHtml(item.customer)} · ${escapeHtml(item.message)}`;
             return `
             <div class="exception-item ${item.severity}">
                 <div class="exception-top">
@@ -5598,7 +5615,7 @@
                         ${editButton}
                     </span>
                 </div>
-                <div class="exception-main">${escapeHtml(item.customer)} · ${escapeHtml(item.message)}</div>
+                <div class="exception-main">${mainMessageHtml}</div>
                 <div class="exception-meta">${escapeHtml(item.platform)} · ${escapeHtml(item.meta)}</div>
                 ${actionButton ? `<div class="exception-actions">${actionButton}</div>` : ''}
             </div>`;
@@ -5884,6 +5901,10 @@
             collectOrderExceptionsForRow(exceptionItems, {
                 r, idx, start, endDay, returnDueDay, shippingPlan, conflictList, inventoryRecord, isReturned, isShipped, turnaroundRisks
             });
+            const isUnreturnedOverdue = !isReturned && realToday > returnDueDay;
+            if (deviceKey && isUnreturnedOverdue) {
+                occupiedSet.add(deviceKey);
+            }
 
             // 判断条件：查询区间的开始时间(qStart) 早于或等于 机器归还日(end)
             // 且 查询区间的结束时间(qEnd) 晚于或等于建议发货日(prepWindow)
