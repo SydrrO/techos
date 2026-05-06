@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <meta name="app-version" content="V7.00">
-    <title>SYDRRO-TECH V7.00 | 智能资产终端</title>
+    <meta name="app-version" content="V7.01">
+    <title>SYDRRO-TECH V7.01 | 智能资产终端</title>
     <style>
         :root {
             --bg-color: #f4f7fb;
@@ -1836,6 +1836,164 @@
                 display: none !important;
             }
         }
+
+        body.modal-scroll-locked {
+            overflow: hidden;
+        }
+
+        #image-order-modal.modal-backdrop,
+        #order-edit-modal.modal-backdrop {
+            overscroll-behavior: contain;
+        }
+
+        #image-order-modal .ocr-panel,
+        #order-edit-modal .ocr-panel {
+            display: flex;
+            flex-direction: column;
+            width: min(760px, calc(100vw - 48px));
+            max-height: min(84vh, 760px);
+            overflow: hidden;
+            border-radius: 24px;
+        }
+
+        #order-edit-modal .ocr-panel {
+            width: min(680px, calc(100vw - 48px));
+            max-height: min(82vh, 720px);
+        }
+
+        #image-order-modal .ocr-panel-head,
+        #order-edit-modal .ocr-panel-head {
+            flex: 0 0 auto;
+        }
+
+        #image-order-modal .ocr-body,
+        #order-edit-modal .ocr-body {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #image-order-modal .ocr-body > div,
+        #order-edit-modal .ocr-body > div {
+            min-height: 0;
+        }
+
+        @media (pointer: coarse) and (max-width: 900px), (max-width: 760px) {
+            body.modal-scroll-locked {
+                position: fixed;
+                left: 0;
+                right: 0;
+                width: 100%;
+                overflow: hidden !important;
+            }
+
+            #image-order-modal.modal-backdrop,
+            #order-edit-modal.modal-backdrop {
+                align-items: center !important;
+                justify-content: center !important;
+                padding: max(16px, env(safe-area-inset-top, 0px)) 14px max(16px, env(safe-area-inset-bottom, 0px)) !important;
+                overflow: hidden !important;
+                touch-action: none;
+            }
+
+            #image-order-modal .ocr-panel,
+            #order-edit-modal .ocr-panel {
+                width: min(480px, calc(100vw - 28px)) !important;
+                max-height: min(76vh, 620px) !important;
+                max-height: min(76svh, 620px) !important;
+                height: auto !important;
+                border-radius: 24px !important;
+                box-shadow: 0 22px 64px rgba(15,23,42,0.26) !important;
+                transform: translateZ(0);
+                touch-action: pan-y;
+            }
+
+            #image-order-modal .ocr-panel-head,
+            #order-edit-modal .ocr-panel-head {
+                position: relative !important;
+                top: auto !important;
+                z-index: 2;
+                min-height: 52px;
+                padding: 13px 15px !important;
+                box-sizing: border-box;
+            }
+
+            #image-order-modal .ocr-panel-title,
+            #order-edit-modal .ocr-panel-title {
+                font-size: 16px !important;
+            }
+
+            #image-order-modal .ocr-close,
+            #order-edit-modal .ocr-close {
+                width: 36px !important;
+                height: 36px !important;
+                flex: 0 0 36px;
+            }
+
+            #image-order-modal .ocr-body,
+            #order-edit-modal .ocr-body {
+                padding: 14px !important;
+                gap: 12px !important;
+            }
+
+            #image-order-modal .ocr-form,
+            #order-edit-modal .ocr-form {
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+
+            #image-order-modal .form-field.full,
+            #order-edit-modal .form-field.full {
+                grid-column: 1 / -1 !important;
+            }
+
+            #image-order-modal .ocr-form input,
+            #image-order-modal .ocr-form select,
+            #order-edit-modal .ocr-form input,
+            #order-edit-modal .ocr-form select {
+                min-height: 42px !important;
+                padding: 9px 10px !important;
+                border-radius: 12px !important;
+                box-sizing: border-box !important;
+            }
+
+            #image-order-modal .form-field label,
+            #order-edit-modal .form-field label {
+                font-size: 10px !important;
+            }
+
+            #image-order-modal .ocr-actions,
+            #order-edit-modal .ocr-actions {
+                position: sticky !important;
+                bottom: 0 !important;
+                z-index: 3;
+                margin: 12px -14px -14px !important;
+                padding: 10px 14px max(10px, env(safe-area-inset-bottom, 0px)) !important;
+                background: rgba(248,250,252,0.98) !important;
+                border-top: 1px solid #e8eef6;
+                backdrop-filter: blur(12px);
+            }
+
+            #image-order-modal .ocr-actions .ocr-btn,
+            #order-edit-modal .ocr-actions .ocr-btn {
+                min-height: 42px;
+            }
+        }
+
+        @media (pointer: coarse) and (max-width: 430px), (max-width: 430px) {
+            #image-order-modal .ocr-panel,
+            #order-edit-modal .ocr-panel {
+                max-height: min(74vh, 580px) !important;
+                max-height: min(74svh, 580px) !important;
+            }
+
+            #image-order-modal .ocr-form,
+            #order-edit-modal .ocr-form {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body class="app-booting">
@@ -1846,7 +2004,7 @@
             <div class="loader-mark" aria-hidden="true"></div>
             <div class="loader-title">
                 <strong>SYDRRO-TECH</strong>
-                <span>INTELLIGENT ASSET OS · V7.00</span>
+                <span>INTELLIGENT ASSET OS · V7.01</span>
             </div>
         </div>
         <div class="loader-track" aria-hidden="true"><span></span></div>
@@ -1922,7 +2080,7 @@
             <h1>SYDRRO-TECH</h1>
             <span id="school-badge" class="school-badge"></span>
         </div>
-        <p>INTELLIGENT ASSET OS · V7.00</p>
+        <p>INTELLIGENT ASSET OS · V7.01</p>
     </div>
     <div class="header-actions">
         <div class="nav-toggle">
@@ -3359,6 +3517,27 @@
             .join('');
     }
 
+    let modalScrollY = 0;
+
+    function setOrderModalScrollLock(locked) {
+        if (locked) {
+            if (document.body.classList.contains('modal-scroll-locked')) return;
+            modalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            document.body.classList.add('modal-scroll-locked');
+            document.body.style.top = `-${modalScrollY}px`;
+            return;
+        }
+        if (!document.body.classList.contains('modal-scroll-locked')) return;
+        document.body.classList.remove('modal-scroll-locked');
+        document.body.style.top = '';
+        window.scrollTo(0, modalScrollY);
+    }
+
+    function refreshOrderModalScrollLock() {
+        const hasActiveOrderModal = Boolean(document.querySelector('#image-order-modal.active, #order-edit-modal.active'));
+        setOrderModalScrollLock(hasActiveOrderModal);
+    }
+
     function openImageOrderModal() {
         if (!requireAdmin('手动录单')) return;
         renderOcrModelOptions();
@@ -3371,10 +3550,12 @@
         setOcrStatus('');
         setOcrSaveState('待写入');
         document.getElementById('image-order-modal')?.classList.add('active');
+        refreshOrderModalScrollLock();
     }
 
     function closeImageOrderModal() {
         document.getElementById('image-order-modal')?.classList.remove('active');
+        refreshOrderModalScrollLock();
     }
 
     function normalizeOcrText(text) {
@@ -4190,10 +4371,12 @@
         setOrderEditStatus('待保存');
         setOrderEditMessage('');
         document.getElementById('order-edit-modal')?.classList.add('active');
+        refreshOrderModalScrollLock();
     }
 
     function closeOrderEditModal() {
         document.getElementById('order-edit-modal')?.classList.remove('active');
+        refreshOrderModalScrollLock();
     }
 
     function readOrderEditRow(oldRow = {}) {
@@ -6101,6 +6284,7 @@
     window.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closeScheduleQueryModal();
+            closeImageOrderModal();
             closeOrderEditModal();
         }
     });
